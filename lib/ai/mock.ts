@@ -5,6 +5,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  TrendAnalysisResult,
   WeeklyReportResult,
 } from "@/lib/ai/provider";
 
@@ -189,6 +190,40 @@ export class MockAiProvider implements AiProvider {
           : "まず今週3件の投稿を予約してください。",
         "外れ値上位の投稿を1件選び、「この型で作る」で次の投稿を生成してください。",
         "反応が高かったテーマを3投稿シリーズに展開してください。",
+      ],
+    };
+  }
+
+  async analyzeTrends(input: {
+    genre: string;
+    posts: { text: string; likes: number }[];
+  }): Promise<TrendAnalysisResult> {
+    return {
+      risingTopics: [
+        `${input.genre} × AIエージェントの実務導入事例`,
+        "AI社員・デジタル従業員という切り口",
+      ],
+      evergreenTopics: ["初心者向けの始め方・手順解説", "失敗談と回避策"],
+      saturatedTopics: ["新モデルのニュース速報", "ツール一覧まとめ"],
+      opportunityTopics: [
+        `中小企業の現場に絞った${input.genre}の定着ノウハウ`,
+        "導入コストと回収期間の実数公開",
+      ],
+      frequentKeywords: ["AIエージェント", "業務削減", "事例", "定着", "コスト"],
+      summary: `（モック）「${input.genre}」ではニュース系の発信が飽和する一方、実務の数字を伴う導入事例は発信者が少なく反応が高い傾向です（分析対象 ${input.posts.length} 件）。`,
+      postIdeas: [
+        {
+          title: "導入3ヶ月の実数公開",
+          angle: "コスト・削減時間・つまずきを実数で公開し、意思決定者の不安を解消する",
+        },
+        {
+          title: "『ツールは増やすな』逆張り",
+          angle: "ツール紹介が飽和している市場で、削減にフォーカスした逆張りで差別化する",
+        },
+        {
+          title: "現場が使い続ける仕組みの作り方",
+          angle: "導入ノウハウではなく定着ノウハウに絞り、機会テーマを取りに行く",
+        },
       ],
     };
   }

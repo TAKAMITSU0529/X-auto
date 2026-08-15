@@ -5,6 +5,8 @@ import { auth } from "@/lib/auth";
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/research",
+  "/trends",
+  "/search",
   "/benchmarks",
   "/library",
   "/generate",

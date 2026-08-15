@@ -12,9 +12,13 @@ const PURPOSES = ["認知", "共感", "教育", "販売", "その他"];
 export function GenerateForm({
   sourcePostId,
   patternId,
+  defaultGenre,
+  defaultMessage,
 }: {
   sourcePostId?: string;
   patternId?: string;
+  defaultGenre?: string;
+  defaultMessage?: string;
 }) {
   const [state, formAction] = useActionState(generateAction, initialState);
 
@@ -32,6 +36,7 @@ export function GenerateForm({
           label="発信ジャンル"
           name="genre"
           required
+          defaultValue={defaultGenre}
           placeholder="例：中小企業のAI活用"
         />
         <label className="block">
@@ -55,6 +60,7 @@ export function GenerateForm({
         label="今回伝えたいこと"
         name="message"
         rows={3}
+        defaultValue={defaultMessage}
         placeholder="例：AIツールは導入より定着が大事。まず1部署で小さく回すべき"
       />
       <TextArea

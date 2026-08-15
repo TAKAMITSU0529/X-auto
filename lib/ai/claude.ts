@@ -7,6 +7,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  TrendAnalysisResult,
   WeeklyReportResult,
 } from "@/lib/ai/provider";
 
@@ -299,5 +300,38 @@ ${JSON.stringify(input.stats, null, 2)}
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
     return extractJson<WeeklyReportResult>(raw);
+  }
+
+  async analyzeTrends(input: {
+    genre: string;
+    posts: { text: string; likes: number }[];
+  }): Promise<TrendAnalysisResult> {
+    const client = createClient();
+
+    const postsSection = input.posts
+      .slice(0, 50)
+      .map((p, i) => `--- 投稿${i + 1} (いいね ${p.likes}) ---\n${p.text.slice(0, 300)}`)
+      .join("\n\n");
+
+    const prompt = `ジャンル「${input.genre}」の直近の高反応投稿群からトレンドを分析してください。
+
+${postsSection}
+
+TREND RADAR として4分類し、投稿ネタ候補も提案してください。
+次のJSON形式で回答してください:
+{
+  "risingTopics": ["急激に伸びているテーマ"],
+  "evergreenTopics": ["継続的に伸びるテーマ"],
+  "saturatedTopics": ["競合過多のテーマ"],
+  "opportunityTopics": ["需要があるのに発信者が少ないテーマ"],
+  "frequentKeywords": ["頻出キーワード"],
+  "summary": "このジャンルの傾向の総括 (推定であることを前提に)",
+  "postIdeas": [{ "title": "ネタのタイトル", "angle": "切り口の説明" }]
+}
+
+postIdeas は3〜5個。分析は推定であり断定しないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
+    return extractJson<TrendAnalysisResult>(raw);
   }
 }

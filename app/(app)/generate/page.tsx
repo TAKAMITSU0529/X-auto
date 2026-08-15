@@ -22,13 +22,21 @@ import { DraftPicker } from "./draft-picker";
 export default async function GeneratePage({
   searchParams,
 }: {
-  searchParams: Promise<{ source?: string; g?: string; pattern?: string }>;
+  searchParams: Promise<{
+    source?: string;
+    g?: string;
+    pattern?: string;
+    genre?: string;
+    message?: string;
+  }>;
 }) {
   const userId = await requireUserId();
   const {
     source: sourcePostId,
     g: generatedId,
     pattern: patternId,
+    genre: defaultGenre,
+    message: defaultMessage,
   } = await searchParams;
 
   const [sourcePost, pattern, brand, generated, recentDrafts] = await Promise.all([
@@ -151,7 +159,12 @@ export default async function GeneratePage({
             </p>
           ) : null}
 
-          <GenerateForm sourcePostId={sourcePost?.id} patternId={pattern?.id} />
+          <GenerateForm
+            sourcePostId={sourcePost?.id}
+            patternId={pattern?.id}
+            defaultGenre={defaultGenre}
+            defaultMessage={defaultMessage}
+          />
         </Card>
 
         {generated && drafts ? (

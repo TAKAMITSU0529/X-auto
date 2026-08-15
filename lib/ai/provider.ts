@@ -105,6 +105,22 @@ export type WeeklyReportResult = {
   nextActions: string[];
 };
 
+/** ジャンル・トレンド分析の結果 (F-11 / TREND RADAR)。全て AI推定 */
+export type TrendAnalysisResult = {
+  /** 急激に伸びているテーマ */
+  risingTopics: string[];
+  /** 継続的に伸びるテーマ */
+  evergreenTopics: string[];
+  /** 競合過多のテーマ */
+  saturatedTopics: string[];
+  /** 需要があるのに発信者が少ないテーマ */
+  opportunityTopics: string[];
+  frequentKeywords: string[];
+  summary: string;
+  /** 投稿ネタ候補。ワンクリックで F-06 の入力になる */
+  postIdeas: { title: string; angle: string }[];
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -142,4 +158,10 @@ export interface AiProvider {
   generateWeeklyReport(input: {
     stats: unknown;
   }): Promise<WeeklyReportResult>;
+
+  /** ジャンルの高反応投稿群からトレンドを分類する (F-11) */
+  analyzeTrends(input: {
+    genre: string;
+    posts: { text: string; likes: number }[];
+  }): Promise<TrendAnalysisResult>;
 }

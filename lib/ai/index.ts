@@ -10,6 +10,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  TrendAnalysisResult,
   WeeklyReportResult,
 } from "@/lib/ai/provider";
 
@@ -106,6 +107,19 @@ export class AiService {
       run: async () => ({
         result: await this.provider.generateWeeklyReport(input),
       }),
+    });
+  }
+
+  async analyzeTrends(input: {
+    genre: string;
+    posts: { text: string; likes: number }[];
+  }): Promise<TrendAnalysisResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.analyzeTrends",
+      units: 1,
+      run: async () => ({ result: await this.provider.analyzeTrends(input) }),
     });
   }
 }
