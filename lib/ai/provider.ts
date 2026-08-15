@@ -93,6 +93,18 @@ export type DraftScore = {
   comment: string;
 };
 
+/** 週次AIレポート (F-20)。summary/highlights は AI推定、stats は実測 */
+export type WeeklyReportResult = {
+  summary: string;
+  highlights: string[];
+  /** 来週増やすべきこと */
+  increase: string[];
+  /** 減らすべきこと */
+  decrease: string[];
+  /** NEXT BEST ACTION: 次に行う具体的な行動 */
+  nextActions: string[];
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -125,4 +137,9 @@ export interface AiProvider {
     genre: string;
     brand?: unknown;
   }): Promise<DraftScore[]>;
+
+  /** 週次レポートと NEXT BEST ACTION を生成する (F-20) */
+  generateWeeklyReport(input: {
+    stats: unknown;
+  }): Promise<WeeklyReportResult>;
 }

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getOwnPostsWithMetrics } from "@/lib/analytics/service";
+import { computePerformanceInsights } from "@/lib/analytics/insights";
+import { getLatestWeeklyReport } from "@/lib/analytics/weekly-report";
+import { InsightsSection } from "./insights-section";
+import { WeeklyReportSection } from "./weekly-report-section";
 import {
   Card,
   DataNote,
@@ -16,7 +20,11 @@ import { SnapshotNowButton } from "./snapshot-now-button";
 /** 自己投稿分析 (F-10 基本表示)。 */
 export default async function AnalyticsPage() {
   const userId = await requireUserId();
-  const posts = await getOwnPostsWithMetrics(userId);
+  const [posts, insights, latestReport] = await Promise.all([
+    getOwnPostsWithMetrics(userId),
+    computePerformanceInsights(userId),
+    getLatestWeeklyReport(userId),
+  ]);
 
   const totals = posts.reduce(
     (acc, p) => {
@@ -138,6 +146,19 @@ export default async function AnalyticsPage() {
               スナップショットは worker（`npm run worker`）が5分ごとに確認します。
             </p>
           </Card>
+
+          <WeeklyReportSection
+            latest={
+              latestReport
+                ? {
+                    createdAt: latestReport.createdAt.toISOString(),
+                    report: latestReport.report,
+                  }
+                : null
+            }
+          />
+
+          <InsightsSection insights={insights} />
         </div>
       )}
     </>

@@ -38,6 +38,7 @@ model User {
   generatedPosts  GeneratedPost[]
   apiUsages       ApiUsage[]
   budgetSetting   BudgetSetting?
+  weeklyReports   WeeklyReport[]
 
   @@map("users")
 }
@@ -462,4 +463,25 @@ model BudgetSetting {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("budget_settings")
+}
+
+// ---------------------------------------------------------------------------
+// 週次AIレポート (F-20)
+// ---------------------------------------------------------------------------
+
+/// AI GROWTH COACH の週次レポート。reportJson に summary / highlights /
+/// nextActions を持つ (AI推定として表示する)。
+model WeeklyReport {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  reportJson  Json     @map("report_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodStart])
+  @@index([userId, createdAt])
+  @@map("weekly_reports")
 }

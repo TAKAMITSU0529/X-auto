@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
 import { getBudgetStatus } from "@/lib/usage/guard";
 import { getRankedPosts } from "@/lib/research/service";
+import { computePerformanceInsights } from "@/lib/analytics/insights";
+import { getLatestWeeklyReport } from "@/lib/analytics/weekly-report";
 import {
   Card,
   EmptyState,
@@ -64,14 +66,18 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const ranking = recentAccount
-    ? await getRankedPosts({
-        userId,
-        benchmarkAccountId: recentAccount.id,
-        sortBy: "outlier",
-        limit: 3,
-      })
-    : null;
+  const [ranking, insights, latestReport] = await Promise.all([
+    recentAccount
+      ? getRankedPosts({
+          userId,
+          benchmarkAccountId: recentAccount.id,
+          sortBy: "outlier",
+          limit: 3,
+        })
+      : Promise.resolve(null),
+    computePerformanceInsights(userId),
+    getLatestWeeklyReport(userId),
+  ]);
 
   return (
     <>
@@ -212,6 +218,50 @@ export default async function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {/* AI INSIGHT (F-21) */}
+      {insights.insights.length > 0 || latestReport ? (
+        <Card className="mt-6">
+          <h2 className="mb-3 text-sm font-semibold text-ink-900">
+            AI INSIGHT
+          </h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {insights.insights.length > 0 ? (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  実測データからの傾向（DATA）
+                </p>
+                <ul className="space-y-1.5 text-sm text-ink-700">
+                  {insights.insights.slice(0, 3).map((text, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-brand-600">▸</span>
+                      <span>{text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {latestReport ? (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-500">
+                  NEXT BEST ACTION（AI推定）
+                </p>
+                <ol className="list-inside list-decimal space-y-1.5 text-sm text-ink-700">
+                  {latestReport.report.nextActions.slice(0, 3).map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
+                </ol>
+                <Link
+                  href="/analytics"
+                  className="mt-2 inline-block text-xs text-brand-600 hover:underline"
+                >
+                  週次レポート全文を見る →
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
     </>
   );
 }

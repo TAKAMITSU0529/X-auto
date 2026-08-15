@@ -7,6 +7,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  WeeklyReportResult,
 } from "@/lib/ai/provider";
 
 /**
@@ -272,5 +273,31 @@ scores の順序は案の順序と一致させること。`;
       throw new Error("AIから有効なスコアが返りませんでした。");
     }
     return parsed.scores;
+  }
+
+  async generateWeeklyReport(input: {
+    stats: unknown;
+  }): Promise<WeeklyReportResult> {
+    const client = createClient();
+
+    const prompt = `X運用の週次レポートを作成してください。
+以下は実測データの集計です (事実):
+
+${JSON.stringify(input.stats, null, 2)}
+
+このデータに基づき、AI GROWTH COACH として週次レポートを書いてください。
+「分析だけで終わらず、次に何をするか」を必ず具体的に提示すること (NEXT BEST ACTION)。
+
+次のJSON形式で回答してください:
+{
+  "summary": "今週の総括 (2〜3文)",
+  "highlights": ["今週のハイライト"],
+  "increase": ["来週増やすべきこと"],
+  "decrease": ["減らすべきこと"],
+  "nextActions": ["明日〇〇を投稿してください、のような具体的な次の行動 (2〜4個)"]
+}`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    return extractJson<WeeklyReportResult>(raw);
   }
 }

@@ -93,7 +93,7 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-25 | API USAGE 記録・BUDGET LIMIT 強制・24時間キャッシュ |
 | F-21 | ダッシュボード（数値サマリー・今日の予約投稿・失敗アラート・次にやること・外れ値トップ3） |
 
-### 完了：Phase 2 スライスA
+### 完了：Phase 2 スライスA〜B
 
 | 機能 | 内容 |
 |---|---|
@@ -101,10 +101,14 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-04 一括 | **複数投稿の一括分析**（外れ値上位20件を横断分析：共通構造・HOOK・テーマ・感情・CTA・形式） |
 | F-16 自動生成 | **WINNING PATTERN 自動抽出**（一括分析から勝ちパターンを保存。ライブラリから「この型で作る」で生成に転用） |
 | F-06 予測スコア | **AI予測反応スコア**（10軸評価＋総合点を3案それぞれに付与。強み/弱みの表示。保証ではなくAI推定として明示） |
+| F-10 拡張 | **TIME/HOOK/FORMAT分析**（曜日×時間帯ヒートマップ・書き出しタイプ別/形式別の平均ER。分類はルールベース＝DATA扱い、日本時間） |
+| F-19 初版 | **Learning Loop**（INPUT[HOOK・形式・時間帯]→RESULT[ER]の集計から「このアカウントで伸びる要素」を算出） |
+| F-20 | **週次AIレポート＋NEXT BEST ACTION**（直近7日の実測集計→AI総括・増やす/減らす・次の具体的行動。保存・再生成可） |
+| F-21 完成 | **AI INSIGHT**（ダッシュボードに実測傾向（DATA）とNEXT BEST ACTION（AI推定）を表示） |
 
 ### 未実装（Phase 2 残り以降）
 
-- 時間帯/テーマ/HOOK/形式分析・週次AIレポート＋NEXT BEST ACTION・Personal Growth Model・AI INSIGHT・検索/フィルタ・コンテンツカレンダー（月表示）・画像/スレッド投稿・CSV出力 など要件定義 §10 参照
+- テーマ別分析（AI分類が必要）・Personal Growth Model 本格版（予測スコアの本人データ補正）・検索/フィルタ・CSV出力・コンテンツカレンダー（月表示）・画像/スレッド投稿・Phase 3 戦略レイヤー（競合発見・トレンド・ポジショニング等）は要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -143,6 +147,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-slice3.ts` | スライス3の受け入れ確認（類似度チェック・3案生成・丸写し拒否） |
 | `npx tsx scripts/verify-slice4.ts` | スライス4の受け入れ確認（予約→投稿→自己投稿化→スナップショット・重複ブロック） |
 | `npx tsx scripts/verify-phase2a.ts` | Phase 2 スライスAの受け入れ確認（IMPACT SCORE・一括分析・勝ちパターン・予測スコア） |
+| `npx tsx scripts/verify-phase2b.ts` | Phase 2 スライスBの受け入れ確認（HOOK/形式/時間帯分析・週次レポート） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック

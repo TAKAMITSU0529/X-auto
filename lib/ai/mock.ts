@@ -5,6 +5,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  WeeklyReportResult,
 } from "@/lib/ai/provider";
 
 /**
@@ -164,5 +165,31 @@ export class MockAiProvider implements AiProvider {
         comment: `（モック）${hasNumbers ? "数字が入っており具体性が強い。" : "数字を1つ入れると具体性が上がる。"}${hasQuestion ? "問いかけで返信を誘発できる。" : ""}`,
       };
     });
+  }
+
+  async generateWeeklyReport(input: {
+    stats: unknown;
+  }): Promise<WeeklyReportResult> {
+    const stats = input.stats as {
+      postCount?: number;
+      bestHook?: string | null;
+      bestSlot?: string | null;
+    };
+    return {
+      summary: `（モック）今週は${stats.postCount ?? 0}件投稿しました。具体的な数字と実体験を含む投稿の反応が引き続き高い傾向です。`,
+      highlights: [
+        "実体験＋数字の投稿がエンゲージメント率で上位",
+        stats.bestHook ? `書き出し「${stats.bestHook}」が好調` : "サンプル蓄積中",
+      ],
+      increase: ["導入事例の具体的な数字", "失敗談からの学びの共有"],
+      decrease: ["一般的なAIニュースの紹介"],
+      nextActions: [
+        stats.bestSlot
+          ? `${stats.bestSlot}に次の投稿を予約してください。`
+          : "まず今週3件の投稿を予約してください。",
+        "外れ値上位の投稿を1件選び、「この型で作る」で次の投稿を生成してください。",
+        "反応が高かったテーマを3投稿シリーズに展開してください。",
+      ],
+    };
   }
 }

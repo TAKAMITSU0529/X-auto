@@ -10,6 +10,7 @@ import type {
   DraftScore,
   PostAnalysisResult,
   StructureBlock,
+  WeeklyReportResult,
 } from "@/lib/ai/provider";
 
 export * from "@/lib/ai/provider";
@@ -91,6 +92,20 @@ export class AiService {
       endpoint: "ai.scoreDrafts",
       units: 1,
       run: async () => ({ result: await this.provider.scoreDrafts(input) }),
+    });
+  }
+
+  async generateWeeklyReport(input: {
+    stats: unknown;
+  }): Promise<WeeklyReportResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.summarize",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generateWeeklyReport(input),
+      }),
     });
   }
 }
