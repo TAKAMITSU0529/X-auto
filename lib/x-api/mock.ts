@@ -195,6 +195,37 @@ export class MockXApiClient implements XApiClient {
     });
   }
 
+  /** ユーザー検索のモック。クエリから決定的に競合候補らしいアカウントを生成する */
+  async searchUsers(query: string, maxResults: number): Promise<XUser[]> {
+    const rng = createRng(seedFrom(`users-${query}`));
+    const keyword = query.split(/\s+/)[0] ?? "AI";
+    const archetypes = [
+      { suffix: "consul", name: `${keyword}コンサル`, bio: `${keyword}の導入支援を年間30社。中小企業向けに現場目線で発信しています。` },
+      { suffix: "labo", name: `${keyword}研究室`, bio: `${keyword}の最新情報を毎日発信。ツールレビュー中心。` },
+      { suffix: "ceo", name: `${keyword}経営者`, bio: `自社に${keyword}を導入して人件費を30%削減した経営者。実体験のみ発信。` },
+      { suffix: "school", name: `${keyword}スクール`, bio: `${keyword}講座を運営。初心者向けの学習ロードマップを発信。受講生2,000名。` },
+      { suffix: "news", name: `${keyword}ニュース`, bio: `${keyword}関連のニュースを速報でお届け。` },
+      { suffix: "freelance", name: `${keyword}フリーランス`, bio: `${keyword}を活用して月商7桁。個人での稼ぎ方を発信。` },
+      { suffix: "dx", name: `${keyword}×DX支援`, bio: `製造業・建設業向けの${keyword}導入とDX支援。補助金にも詳しいです。` },
+      { suffix: "sales", name: `${keyword}営業ハック`, bio: `営業組織への${keyword}導入で商談数2倍。営業マネージャー向け。` },
+    ];
+
+    return archetypes.slice(0, Math.min(maxResults, archetypes.length)).map((a) => {
+      const handle = `${keyword.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "ai"}_${a.suffix}`;
+      return {
+        xUserId: `mock-${seedFrom(handle)}`,
+        handle,
+        displayName: `${a.name}（モック）`,
+        profile: a.bio,
+        profileImageUrl: null,
+        url: `https://example.com/${handle}`,
+        followers: 1_000 + Math.floor(rng() * 80_000),
+        following: 100 + Math.floor(rng() * 2_000),
+        postsCount: 500 + Math.floor(rng() * 8_000),
+      };
+    });
+  }
+
   async createPost(args: {
     accessToken: string;
     text: string;

@@ -38,6 +38,7 @@ export type AiCostKey =
   | "ai.analyzeBatch"
   | "ai.scoreDrafts"
   | "ai.analyzeTrends"
+  | "ai.scoreCompetitors"
   | "ai.summarize";
 
 /**
@@ -50,6 +51,7 @@ export const AI_UNIT_COST_USD: Record<AiCostKey, number> = {
   "ai.analyzeBatch": 0.05,
   "ai.scoreDrafts": 0.02,
   "ai.analyzeTrends": 0.04,
+  "ai.scoreCompetitors": 0.03,
   "ai.summarize": 0.02,
 };
 

@@ -6,6 +6,7 @@ import { MockAiProvider } from "@/lib/ai/mock";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  CompetitorScore,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -120,6 +121,21 @@ export class AiService {
       endpoint: "ai.analyzeTrends",
       units: 1,
       run: async () => ({ result: await this.provider.analyzeTrends(input) }),
+    });
+  }
+
+  async scoreCompetitors(input: {
+    genre: string;
+    candidates: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<CompetitorScore[]> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.scoreCompetitors",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.scoreCompetitors(input),
+      }),
     });
   }
 }

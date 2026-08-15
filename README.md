@@ -108,16 +108,17 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-19 補正 | **Personal Growth Model 補正**（本人実績3件以上で、伸びているHOOK/形式に一致する案の予測スコアを加点。補正理由と基礎点を明示） |
 | F-02 出力 | **CSVエクスポート**（ランキングをBOM付きUTF-8でダウンロード） |
 
-### 完了：Phase 3 スライスA
+### 完了：Phase 3 スライスA〜B
 
 | 機能 | 内容 |
 |---|---|
 | F-11 | **ジャンル・トレンド分析＋TREND RADAR**（直近7日検索→AIが Rising/Evergreen/Saturated/Opportunity に4分類。投稿ネタ候補から「この内容で3案生成」へワンクリック連携） |
 | F-24 | **検索/フィルタ**（取得済み投稿の横断検索：キーワード・アカウント・いいね数・保存済み。DB内検索でAPIコスト0） |
+| F-08 | **競合発見エンジン＋COMPETITOR SCORE**（キーワード検索で同ジャンル発信者を発見→AIが0〜100で採点・理由付き→ワンクリックでベンチマーク追加。Follow Graph探索はコスト過大のため非実装） |
 
 ### 未実装（以降）
 
-- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-08 競合発見エンジン・F-09 マーケティング戦略AI・F-12 ポジショニング＋プロフィール生成・F-13 動線分析・F-17 Knowledge Base・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
+- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-09 マーケティング戦略AI・F-12 ポジショニング＋プロフィール生成・F-13 動線分析・F-17 Knowledge Base・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -159,6 +160,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase2b.ts` | Phase 2 スライスBの受け入れ確認（HOOK/形式/時間帯分析・週次レポート） |
 | `npx tsx scripts/verify-phase2c.ts` | Phase 2 スライスCの受け入れ確認（Personal Growth Model 補正・CSV） |
 | `npx tsx scripts/verify-phase3a.ts` | Phase 3 スライスAの受け入れ確認（トレンド分析・検索） |
+| `npx tsx scripts/verify-phase3b.ts` | Phase 3 スライスBの受け入れ確認（競合発見・COMPETITOR SCORE） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック

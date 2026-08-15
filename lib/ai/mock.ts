@@ -1,6 +1,7 @@
 import type {
   AiProvider,
   BatchAnalysisResult,
+  CompetitorScore,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -226,5 +227,39 @@ export class MockAiProvider implements AiProvider {
         },
       ],
     };
+  }
+
+  async scoreCompetitors(input: {
+    genre: string;
+    candidates: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<CompetitorScore[]> {
+    return input.candidates.map((c) => {
+      // bioの内容から決定的にそれらしいスコアを付ける
+      let score = 50;
+      const reasons: string[] = [];
+      if (/導入|支援|事例|現場|経営/.test(c.bio)) {
+        score += 25;
+        reasons.push("実務・事例ベースの発信でジャンル類似性が高い");
+      }
+      if (/ニュース|速報/.test(c.bio)) {
+        score -= 15;
+        reasons.push("ニュース系はモデリング価値が低め (飽和テーマ)");
+      }
+      if (c.followers > 20_000) {
+        score += 10;
+        reasons.push("フォロワー規模が大きく勝ちパターンの母数が多い");
+      }
+      if (/講座|スクール|受講/.test(c.bio)) {
+        score += 5;
+        reasons.push("マネタイズ動線が明確で導線分析の参考になる");
+      }
+      if (reasons.length === 0) reasons.push("ジャンルとの関連が限定的");
+      return {
+        handle: c.handle,
+        score: Math.max(10, Math.min(95, score)),
+        genre: input.genre,
+        reasons,
+      };
+    });
   }
 }

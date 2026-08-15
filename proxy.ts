@@ -8,6 +8,7 @@ const PROTECTED_PREFIXES = [
   "/trends",
   "/search",
   "/benchmarks",
+  "/competitors",
   "/library",
   "/generate",
   "/schedule",

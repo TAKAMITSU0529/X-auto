@@ -81,6 +81,9 @@ export interface XApiClient {
   /** キーワードで投稿を検索する (直近7日・要件定義 F-11) */
   searchPosts(query: string, maxResults: number): Promise<XPost[]>;
 
+  /** キーワードでユーザーを検索する (F-08 競合発見) */
+  searchUsers(query: string, maxResults: number): Promise<XUser[]>;
+
   /** 投稿を作成する (F-07 予約投稿から呼ばれる) */
   createPost(args: {
     accessToken: string;

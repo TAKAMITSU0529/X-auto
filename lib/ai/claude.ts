@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  CompetitorScore,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -333,5 +334,46 @@ postIdeas は3〜5個。分析は推定であり断定しないこと。`;
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
     return extractJson<TrendAnalysisResult>(raw);
+  }
+
+  async scoreCompetitors(input: {
+    genre: string;
+    candidates: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<CompetitorScore[]> {
+    const client = createClient();
+
+    const list = input.candidates
+      .map(
+        (c) =>
+          `@${c.handle} / ${c.name} / フォロワー${c.followers}\nbio: ${c.bio}`,
+      )
+      .join("\n\n");
+
+    const prompt = `ジャンル「${input.genre}」のベンチマーク候補として、以下のXアカウントを評価してください。
+評価観点: ジャンル類似性・想定読者の類似性・発信内容のモデリング価値・成長性・マネタイズ動線の参考価値。
+公開プロフィールのみから判断し、センシティブ属性は推定しないこと。
+
+${list}
+
+次のJSON形式で回答してください:
+{
+  "scores": [
+    {
+      "handle": "ハンドル名 (@なし)",
+      "score": 85,
+      "genre": "このアカウントの発信ジャンル",
+      "reasons": ["採点理由 (1〜3個)"]
+    }
+  ]
+}
+
+scores は候補全員分、score は 0〜100。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
+    const parsed = extractJson<{ scores: CompetitorScore[] }>(raw);
+    if (!Array.isArray(parsed.scores)) {
+      throw new Error("AIから有効な競合スコアが返りませんでした。");
+    }
+    return parsed.scores;
   }
 }

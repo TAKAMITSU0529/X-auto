@@ -121,6 +121,15 @@ export type TrendAnalysisResult = {
   postIdeas: { title: string; angle: string }[];
 };
 
+/** 競合候補の評価 (F-08 / COMPETITOR SCORE)。AI推定 */
+export type CompetitorScore = {
+  handle: string;
+  /** 0〜100。要件定義 §31 の観点 (ジャンル/読者/内容の類似・成長性等) の総合 */
+  score: number;
+  genre: string;
+  reasons: string[];
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -164,4 +173,10 @@ export interface AiProvider {
     genre: string;
     posts: { text: string; likes: number }[];
   }): Promise<TrendAnalysisResult>;
+
+  /** 競合候補をベンチマーク適性で採点する (F-08 COMPETITOR SCORE) */
+  scoreCompetitors(input: {
+    genre: string;
+    candidates: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<CompetitorScore[]>;
 }

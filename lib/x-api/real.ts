@@ -244,6 +244,30 @@ export class RealXApiClient implements XApiClient {
     );
   }
 
+  /** ユーザー検索 (F-08)。名前・ユーザー名・プロフィールから検索できる */
+  async searchUsers(query: string, maxResults: number): Promise<XUser[]> {
+    const page = await callXApi<{ data?: ApiUser[] }>("/users/search", {
+      token: appToken(),
+      searchParams: {
+        query,
+        max_results: String(Math.min(100, maxResults)),
+        "user.fields": USER_FIELDS,
+      },
+    });
+
+    return (page.data ?? []).map((u) => ({
+      xUserId: u.id,
+      handle: u.username,
+      displayName: u.name,
+      profile: u.description ?? null,
+      profileImageUrl: u.profile_image_url ?? null,
+      url: u.url ?? null,
+      followers: u.public_metrics?.followers_count ?? 0,
+      following: u.public_metrics?.following_count ?? 0,
+      postsCount: u.public_metrics?.tweet_count ?? 0,
+    }));
+  }
+
   async createPost(args: {
     accessToken: string;
     text: string;

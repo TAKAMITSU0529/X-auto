@@ -103,6 +103,20 @@ export class XApiService {
     });
   }
 
+  /** ユーザー検索 (F-08 競合発見) */
+  async searchUsers(query: string, maxResults: number): Promise<XUser[]> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.x,
+      endpoint: "user.search",
+      units: maxResults,
+      run: async () => {
+        const result = await this.client.searchUsers(query, maxResults);
+        return { result, actualUnits: result.length };
+      },
+    });
+  }
+
   async createPost(args: {
     accessToken: string;
     text: string;
