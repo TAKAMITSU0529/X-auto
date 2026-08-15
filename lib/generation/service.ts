@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { AiService, type DraftResult } from "@/lib/ai";
+import { AiService, type DraftResult, type DraftScore } from "@/lib/ai";
 import type { StructureBlock } from "@/lib/ai";
 import {
   checkSimilarity,
@@ -19,6 +19,8 @@ export type GenerationInput = {
   userId: string;
   /** モデリング元の投稿 (任意)。指定しない場合はゼロベース生成 */
   sourcePostId?: string;
+  /** 勝ちパターン (F-16) をモデリング元にする場合に指定 */
+  winningPatternId?: string;
   genre: string;
   /** 今回の投稿で伝えたい内容 */
   message: string;
@@ -36,6 +38,7 @@ export type GenerationResult = {
   generatedPostId: string;
   drafts: DraftWithSimilarity[];
   sourceText: string | null;
+  predictedScores: DraftScore[] | null;
 };
 
 export async function generateThreeDrafts(
@@ -58,24 +61,46 @@ export async function generateThreeDrafts(
     throw new Error("モデリング元の投稿が見つかりません。");
   }
 
+  // 勝ちパターン (F-16) をモデリング元にする場合
+  const winningPattern = input.winningPatternId
+    ? await prisma.winningPattern.findFirst({
+        where: { id: input.winningPatternId, userId: input.userId },
+      })
+    : null;
+  if (input.winningPatternId && !winningPattern) {
+    throw new Error("勝ちパターンが見つかりません。");
+  }
+
   // MY BRAND 設定 (F-17)。生成は常にこれを参照する
   const brand = await prisma.brandProfile.findUnique({
     where: { userId: input.userId },
   });
 
-  // 分析済みなら構造情報も渡す (構造の転用の精度を上げる)
-  const structure =
-    (sourcePost?.analyses[0]?.structureJson as unknown as
-      | StructureBlock[]
-      | null) ?? undefined;
+  // 分析済みなら構造情報も渡す (構造の転用の精度を上げる)。
+  // 勝ちパターン指定時はそのステップを構造として渡す。
+  const patternJson = winningPattern?.patternJson as {
+    steps?: string[];
+    description?: string;
+    hookHint?: string;
+  } | null;
+
+  const structure: StructureBlock[] | undefined = patternJson?.steps
+    ? patternJson.steps.map((step) => ({ label: step, text: "" }))
+    : ((sourcePost?.analyses[0]?.structureJson as unknown as
+        | StructureBlock[]
+        | null) ?? undefined);
 
   const message = [
     input.message,
     input.experience ? `\n自分の経験・具体例: ${input.experience}` : "",
     input.purpose ? `\n投稿の目的: ${input.purpose}` : "",
+    winningPattern
+      ? `\n使用する勝ちパターン「${winningPattern.name}」: ${patternJson?.description ?? ""} / 書き出しのヒント: ${patternJson?.hookHint ?? ""}`
+      : "",
   ].join("");
 
-  const drafts = await new AiService(input.userId).generateDrafts({
+  const ai = new AiService(input.userId);
+  const drafts = await ai.generateDrafts({
     sourceText: sourcePost?.text,
     structure,
     genre: input.genre,
@@ -95,17 +120,33 @@ export async function generateThreeDrafts(
     similarity: sourcePost ? checkSimilarity(draft.text, sourcePost.text) : null,
   }));
 
+  // AI予測反応スコア (F-06)。失敗しても生成自体は成立させる
+  let predictedScores: DraftScore[] | null = null;
+  try {
+    predictedScores = await ai.scoreDrafts({
+      drafts: drafts.map((d) => ({ label: d.label, text: d.text })),
+      genre: input.genre,
+      brand: brand?.basicInfoJson ?? undefined,
+    });
+  } catch {
+    predictedScores = null;
+  }
+
   const record = await prisma.generatedPost.create({
     data: {
       userId: input.userId,
       sourceRefs: {
         sourcePostId: sourcePost?.id ?? null,
+        winningPatternId: winningPattern?.id ?? null,
         genre: input.genre,
         message: input.message,
         experience: input.experience ?? null,
         purpose: input.purpose ?? null,
       } as Prisma.InputJsonValue,
       draftsJson: draftsWithSimilarity as unknown as Prisma.InputJsonValue,
+      predictedScores: predictedScores
+        ? (predictedScores as unknown as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
       similarityJson: sourcePost
         ? (draftsWithSimilarity.map((d) => d.similarity) as unknown as Prisma.InputJsonValue)
         : Prisma.JsonNull,
@@ -117,6 +158,7 @@ export async function generateThreeDrafts(
     generatedPostId: record.id,
     drafts: draftsWithSimilarity,
     sourceText: sourcePost?.text ?? null,
+    predictedScores,
   };
 }
 

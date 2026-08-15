@@ -1,6 +1,8 @@
 import type {
   AiProvider,
+  BatchAnalysisResult,
   DraftResult,
+  DraftScore,
   PostAnalysisResult,
   StructureBlock,
 } from "@/lib/ai/provider";
@@ -85,5 +87,82 @@ export class MockAiProvider implements AiProvider {
         expectedReaction: "（モック）リプライが付きやすい",
       },
     ];
+  }
+
+  async analyzeBatch(input: {
+    posts: { text: string; outlierScore: number }[];
+    accountHandle: string;
+  }): Promise<BatchAnalysisResult> {
+    const avgLength = Math.round(
+      input.posts.reduce((sum, p) => sum + p.text.length, 0) /
+        Math.max(1, input.posts.length),
+    );
+
+    return {
+      commonStructures: [
+        "問題提起 → 常識否定 → 具体例 → 結論",
+        "実体験 → 気づき → 再現可能な方法",
+      ],
+      commonHooks: ["数字型", "断言型", "失敗談型"],
+      frequentThemes: ["AI導入の定着", "業務の削減", "小さく始める"],
+      frequentKeywords: ["AI", "1部署", "定着", "実例", "月20時間"],
+      emotions: ["共感", "発見", "危機感"],
+      ctas: ["プロフィール誘導", "リプライ促し"],
+      avgLength,
+      formats: ["問題提起", "ノウハウ", "実績"],
+      winningPatterns: [
+        {
+          name: "常識否定 → 実データ → 教訓",
+          description:
+            "（モック）冒頭で読者の思い込みを否定し、具体的な数字で裏付けてから、持ち帰れる教訓で締める型。外れ値上位に最も多い。",
+          steps: ["常識否定のフック", "具体的な数字・実例", "再現可能な教訓", "軽いCTA"],
+          hookHint: "「9割の人が〜」「これ、逆です」など断言・逆張りで始める",
+        },
+        {
+          name: "失敗談 → 気づき → 方法",
+          description:
+            "（モック）自分の失敗を先に開示して信頼を作り、そこから得た再現可能な方法を渡す型。返信が付きやすい。",
+          steps: ["失敗の告白", "失敗の原因", "いまのやり方", "問いかけ"],
+          hookHint: "「正直に言います」「失敗しました」で始める",
+        },
+      ],
+      summary: `（モック）@${input.accountHandle} の伸びる投稿は「具体的な数字 × 実体験 × 断言フック」の組み合わせが中心です。抽象的なノウハウ紹介より、1社・1部署の具体例を挙げた投稿が通常比で大きく伸びています。`,
+    };
+  }
+
+  async scoreDrafts(input: {
+    drafts: { label: string; text: string }[];
+    genre: string;
+  }): Promise<DraftScore[]> {
+    return input.drafts.map((draft, index) => {
+      const hasNumbers = /\d/.test(draft.text);
+      const hasQuestion = /[?？]/.test(draft.text);
+      const length = draft.text.length;
+
+      const axes = {
+        hook: 7 + (index === 0 ? 2 : 0),
+        relevance: 8,
+        specificity: hasNumbers ? 8 : 5,
+        novelty: 6 + (index === 0 ? 1 : 0),
+        credibility: 6 + (index === 1 ? 2 : 0),
+        emotion: 6 + (index === 2 ? 2 : 0),
+        readability: length < 200 ? 8 : 6,
+        shareability: hasNumbers ? 7 : 5,
+        cta: hasQuestion ? 7 : 5,
+        brandFit: 7,
+      };
+      const total = Math.min(
+        100,
+        Math.round(
+          (Object.values(axes).reduce((a, b) => a + b, 0) / 100) * 100 + 20,
+        ),
+      );
+
+      return {
+        total,
+        axes,
+        comment: `（モック）${hasNumbers ? "数字が入っており具体性が強い。" : "数字を1つ入れると具体性が上がる。"}${hasQuestion ? "問いかけで返信を誘発できる。" : ""}`,
+      };
+    });
   }
 }

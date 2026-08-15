@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
 import type { DraftWithSimilarity } from "@/lib/generation/service";
+import type { DraftScore } from "@/lib/ai";
 import {
   Card,
   EmptyState,
@@ -21,12 +22,16 @@ import { DraftPicker } from "./draft-picker";
 export default async function GeneratePage({
   searchParams,
 }: {
-  searchParams: Promise<{ source?: string; g?: string }>;
+  searchParams: Promise<{ source?: string; g?: string; pattern?: string }>;
 }) {
   const userId = await requireUserId();
-  const { source: sourcePostId, g: generatedId } = await searchParams;
+  const {
+    source: sourcePostId,
+    g: generatedId,
+    pattern: patternId,
+  } = await searchParams;
 
-  const [sourcePost, brand, generated, recentDrafts] = await Promise.all([
+  const [sourcePost, pattern, brand, generated, recentDrafts] = await Promise.all([
     sourcePostId
       ? prisma.post.findFirst({
           where: {
@@ -40,6 +45,11 @@ export default async function GeneratePage({
               take: 1,
             },
           },
+        })
+      : null,
+    patternId
+      ? prisma.winningPattern.findFirst({
+          where: { id: patternId, userId },
         })
       : null,
     prisma.brandProfile.findUnique({ where: { userId } }),
@@ -57,6 +67,13 @@ export default async function GeneratePage({
 
   const drafts =
     (generated?.draftsJson as unknown as DraftWithSimilarity[] | null) ?? null;
+  const predictedScores =
+    (generated?.predictedScores as unknown as DraftScore[] | null) ?? null;
+  const patternJson = pattern?.patternJson as {
+    description?: string;
+    steps?: string[];
+    hookHint?: string;
+  } | null;
 
   return (
     <>
@@ -76,6 +93,33 @@ export default async function GeneratePage({
 
       <div className="space-y-6">
         <Card>
+          {pattern ? (
+            <div className="mb-5 rounded-lg border border-violet-200 bg-violet-50 p-4">
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-violet-700">
+                  使用する勝ちパターン（AI推定）
+                </p>
+                <Link
+                  href="/generate"
+                  className="text-xs text-ink-500 hover:underline"
+                >
+                  パターンなしで生成する
+                </Link>
+              </div>
+              <p className="text-sm font-semibold text-ink-900">{pattern.name}</p>
+              {patternJson?.description ? (
+                <p className="mt-1 text-xs text-ink-600">
+                  {patternJson.description}
+                </p>
+              ) : null}
+              {patternJson?.steps?.length ? (
+                <p className="mt-1 text-xs text-ink-400">
+                  {patternJson.steps.join(" → ")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {sourcePost ? (
             <div className="mb-5 rounded-lg border border-brand-100 bg-brand-50 p-4">
               <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -99,13 +143,15 @@ export default async function GeneratePage({
                   : " · 未分析（先に分析すると構造転用の精度が上がります）"}
               </p>
             </div>
-          ) : (
-            <p className="mb-5 rounded-lg bg-ink-50 px-4 py-3 text-xs text-ink-500">
-              モデリング元が未指定です。リサーチ結果やライブラリの「この型で作る」から開くと、その投稿の型を転用できます。このままゼロベースで生成することもできます。
-            </p>
-          )}
+          ) : null}
 
-          <GenerateForm sourcePostId={sourcePost?.id} />
+          {!sourcePost && !pattern ? (
+            <p className="mb-5 rounded-lg bg-ink-50 px-4 py-3 text-xs text-ink-500">
+              モデリング元が未指定です。リサーチ結果やライブラリの「この型で作る」から開くと、その投稿・パターンの型を転用できます。このままゼロベースで生成することもできます。
+            </p>
+          ) : null}
+
+          <GenerateForm sourcePostId={sourcePost?.id} patternId={pattern?.id} />
         </Card>
 
         {generated && drafts ? (
@@ -120,6 +166,7 @@ export default async function GeneratePage({
             <DraftPicker
               generatedPostId={generated.id}
               drafts={drafts}
+              predictedScores={predictedScores}
               alreadySaved={generated.status !== "ai_generated"}
               savedIndex={generated.selectedIndex}
             />

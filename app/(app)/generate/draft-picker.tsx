@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { DraftWithSimilarity } from "@/lib/generation/service";
+import type { DraftScore } from "@/lib/ai";
 import { selectDraftAction, type SelectState } from "./actions";
 import { FormError, FormSuccess } from "@/components/form";
 
@@ -15,11 +16,13 @@ const initialState: SelectState = { error: null, success: null };
 export function DraftPicker({
   generatedPostId,
   drafts,
+  predictedScores,
   alreadySaved,
   savedIndex,
 }: {
   generatedPostId: string;
   drafts: DraftWithSimilarity[];
+  predictedScores: DraftScore[] | null;
   alreadySaved: boolean;
   savedIndex: number | null;
 }) {
@@ -53,6 +56,14 @@ export function DraftPicker({
                 {draft.label}
               </span>
               <SimilarityBadge similarity={draft.similarity} />
+              {predictedScores?.[index] ? (
+                <span
+                  className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold tabular-nums text-violet-800"
+                  title={`AI予測反応スコア (保証ではありません)\n${formatAxes(predictedScores[index])}`}
+                >
+                  AI予測 {predictedScores[index].total}点
+                </span>
+              ) : null}
             </div>
 
             <p className="mb-3 flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-800">
@@ -74,6 +85,18 @@ export function DraftPicker({
           </button>
         ))}
       </div>
+
+      {predictedScores?.[selected] ? (
+        <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900">
+          <span className="mr-1.5 rounded bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
+            AI推定
+          </span>
+          {predictedScores[selected].comment}
+          <span className="ml-2 text-violet-600">
+            {formatAxes(predictedScores[selected])}
+          </span>
+        </div>
+      ) : null}
 
       {drafts[selected]?.similarity?.message ? (
         <p
@@ -114,6 +137,26 @@ export function DraftPicker({
       </form>
     </div>
   );
+}
+
+const AXIS_LABELS: Record<string, string> = {
+  hook: "フック",
+  relevance: "関連性",
+  specificity: "具体性",
+  novelty: "新規性",
+  credibility: "信頼性",
+  emotion: "感情",
+  readability: "読みやすさ",
+  shareability: "拡散性",
+  cta: "CTA",
+  brandFit: "ブランド適合",
+};
+
+function formatAxes(score: DraftScore): string {
+  const entries = Object.entries(score.axes) as [string, number][];
+  const top = [...entries].sort((a, b) => b[1] - a[1]).slice(0, 2);
+  const bottom = [...entries].sort((a, b) => a[1] - b[1]).slice(0, 1);
+  return `強み: ${top.map(([k, v]) => `${AXIS_LABELS[k] ?? k}${v}`).join("・")} / 弱み: ${bottom.map(([k, v]) => `${AXIS_LABELS[k] ?? k}${v}`).join("")}`;
 }
 
 function SimilarityBadge({

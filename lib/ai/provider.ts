@@ -53,6 +53,46 @@ export type DraftResult = {
   expectedReaction: string;
 };
 
+/** 複数投稿の一括分析の結果 (F-04 一括 / F-16 WINNING PATTERN) */
+export type BatchAnalysisResult = {
+  /** 共通して使われている文章構造 */
+  commonStructures: string[];
+  /** 頻出する書き出しのタイプ */
+  commonHooks: string[];
+  frequentThemes: string[];
+  frequentKeywords: string[];
+  emotions: string[];
+  ctas: string[];
+  avgLength: number;
+  formats: string[];
+  /** このアカウント/投稿群の勝ちパターン */
+  winningPatterns: {
+    name: string;
+    description: string;
+    steps: string[];
+    hookHint: string;
+  }[];
+  summary: string;
+};
+
+/** AI予測反応スコア (F-06)。10軸 + 総合点 */
+export type DraftScore = {
+  total: number;
+  axes: {
+    hook: number;
+    relevance: number;
+    specificity: number;
+    novelty: number;
+    credibility: number;
+    emotion: number;
+    readability: number;
+    shareability: number;
+    cta: number;
+    brandFit: number;
+  };
+  comment: string;
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -72,4 +112,17 @@ export interface AiProvider {
       prohibited?: unknown;
     };
   }): Promise<DraftResult[]>;
+
+  /** 複数投稿を一括分析し勝ちパターンを抽出する (F-04 一括 / F-16) */
+  analyzeBatch(input: {
+    posts: { text: string; outlierScore: number }[];
+    accountHandle: string;
+  }): Promise<BatchAnalysisResult>;
+
+  /** 生成した3案に AI予測反応スコアを付ける (F-06) */
+  scoreDrafts(input: {
+    drafts: { label: string; text: string }[];
+    genre: string;
+    brand?: unknown;
+  }): Promise<DraftScore[]>;
 }

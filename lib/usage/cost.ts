@@ -32,7 +32,12 @@ export const X_UNIT_COST_USD: Record<XCostKey, number> = {
   "posts.createWithUrl": 0.2,
 };
 
-export type AiCostKey = "ai.analyzePost" | "ai.generateDrafts" | "ai.summarize";
+export type AiCostKey =
+  | "ai.analyzePost"
+  | "ai.generateDrafts"
+  | "ai.analyzeBatch"
+  | "ai.scoreDrafts"
+  | "ai.summarize";
 
 /**
  * AI API: 1回の呼び出しあたりの推定コスト (USD)。
@@ -41,6 +46,8 @@ export type AiCostKey = "ai.analyzePost" | "ai.generateDrafts" | "ai.summarize";
 export const AI_UNIT_COST_USD: Record<AiCostKey, number> = {
   "ai.analyzePost": 0.01,
   "ai.generateDrafts": 0.03,
+  "ai.analyzeBatch": 0.05,
+  "ai.scoreDrafts": 0.02,
   "ai.summarize": 0.02,
 };
 

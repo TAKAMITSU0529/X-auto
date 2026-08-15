@@ -9,6 +9,7 @@ import {
   type BaselineResult,
   type OutlierTier,
 } from "@/lib/metrics/outlier";
+import { calculateImpactScore } from "@/lib/metrics/impact";
 
 /**
  * ベンチマーク投稿リサーチ (要件定義 F-02) と外れ値検出 (F-14) の中核処理。
@@ -199,10 +200,13 @@ export type RankedPost = {
   engagementBasis: "impressions" | "followers" | "none";
   outlierScore: number;
   tier: OutlierTier;
+  /** X AUTO IMPACT SCORE (F-15)。0〜100 */
+  impactScore: number;
 };
 
 export type RankingSortKey =
   | "outlier"
+  | "impact"
   | "impressions"
   | "likes"
   | "reposts"
@@ -215,6 +219,7 @@ export type RankingSortKey =
 
 export const SORT_LABELS: Record<RankingSortKey, string> = {
   outlier: "外れ値スコア",
+  impact: "X AUTO SCORE",
   impressions: "インプレッション",
   likes: "いいね",
   reposts: "リポスト",
@@ -275,6 +280,11 @@ export async function getRankedPosts(args: {
 
   const posts: RankedPost[] = withMetrics.map(({ row, metrics }) => {
     const outlier = calculateOutlierScore(metrics, baseline, account.followers);
+    const impact = calculateImpactScore({
+      metrics,
+      outlier,
+      postedAt: row.postedAt,
+    });
     return {
       id: row.id,
       xPostId: row.xPostId,
@@ -291,6 +301,7 @@ export async function getRankedPosts(args: {
       engagementBasis: outlier.basis,
       outlierScore: outlier.score,
       tier: outlierTier(outlier.score),
+      impactScore: impact.score,
     };
   });
 
@@ -311,6 +322,8 @@ function comparator(key: RankingSortKey): (a: RankedPost, b: RankedPost) => numb
   switch (key) {
     case "outlier":
       return (a, b) => b.outlierScore - a.outlierScore;
+    case "impact":
+      return (a, b) => b.impactScore - a.impactScore;
     case "engagements":
       return (a, b) => b.totalEngagements - a.totalEngagements;
     case "engagementRate":

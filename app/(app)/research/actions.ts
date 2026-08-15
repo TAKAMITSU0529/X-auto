@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUserId } from "@/lib/auth";
 import { runResearch, type ResearchParams } from "@/lib/research/service";
+import { runBatchAnalysis } from "@/lib/research/batch";
+import type { BatchAnalysisResult } from "@/lib/ai";
 import { BudgetExceededError } from "@/lib/usage/guard";
 
 export type ResearchState = {
@@ -76,4 +78,50 @@ export async function runResearchAction(
   }
 
   redirect(`/research?account=${parsed.data.accountId}&sort=outlier`);
+}
+
+export type BatchState = {
+  error: string | null;
+  result: BatchAnalysisResult | null;
+  analyzedCount: number;
+  savedPatterns: number;
+};
+
+/** 外れ値上位の一括分析 → 勝ちパターン抽出 (F-04 一括 / F-16) */
+export async function batchAnalyzeAction(
+  _prev: BatchState,
+  formData: FormData,
+): Promise<BatchState> {
+  const userId = await requireUserId();
+  const accountId = String(formData.get("accountId") ?? "");
+
+  if (!accountId) {
+    return { error: "対象アカウントが不明です", result: null, analyzedCount: 0, savedPatterns: 0 };
+  }
+
+  try {
+    const { result, savedPatternIds, analyzedCount } = await runBatchAnalysis({
+      userId,
+      benchmarkAccountId: accountId,
+      topN: 20,
+    });
+
+    revalidatePath("/library");
+    return {
+      error: null,
+      result,
+      analyzedCount,
+      savedPatterns: savedPatternIds.length,
+    };
+  } catch (error) {
+    if (error instanceof BudgetExceededError) {
+      return { error: error.message, result: null, analyzedCount: 0, savedPatterns: 0 };
+    }
+    return {
+      error: error instanceof Error ? error.message : "一括分析に失敗しました",
+      result: null,
+      analyzedCount: 0,
+      savedPatterns: 0,
+    };
+  }
 }

@@ -2,7 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 import type {
   AiProvider,
+  BatchAnalysisResult,
   DraftResult,
+  DraftScore,
   PostAnalysisResult,
   StructureBlock,
 } from "@/lib/ai/provider";
@@ -179,5 +181,96 @@ A案は反応重視(フックを強く)、B案は信頼・専門性重視(深い
     }
 
     return parsed.drafts;
+  }
+
+  async analyzeBatch(input: {
+    posts: { text: string; outlierScore: number }[];
+    accountHandle: string;
+  }): Promise<BatchAnalysisResult> {
+    const client = createClient();
+
+    const postsSection = input.posts
+      .map(
+        (p, i) =>
+          `--- 投稿${i + 1} (外れ値スコア ${p.outlierScore.toFixed(1)}倍) ---\n${p.text}`,
+      )
+      .join("\n\n");
+
+    const prompt = `@${input.accountHandle} の高反応投稿群を横断分析してください。
+外れ値スコアは「そのアカウントの通常エンゲージメント率の何倍か」を示す実測値です。
+スコアが高い投稿ほど重視して、このアカウントの勝ちパターンを抽出してください。
+
+${postsSection}
+
+次のJSON形式で回答してください:
+{
+  "commonStructures": ["共通する文章構造"],
+  "commonHooks": ["頻出する書き出しのタイプ"],
+  "frequentThemes": ["頻出テーマ"],
+  "frequentKeywords": ["頻出キーワード"],
+  "emotions": ["刺激している感情"],
+  "ctas": ["誘導のパターン"],
+  "avgLength": 平均文字数の数値,
+  "formats": ["投稿形式 (短文/長文/箇条書き/ストーリー/ノウハウ/問題提起/意見/逆張り/実績/事例)"],
+  "winningPatterns": [
+    {
+      "name": "パターン名 (例: 常識否定 → 実データ → 教訓)",
+      "description": "なぜこの型が効くのかの説明",
+      "steps": ["ステップ1", "ステップ2"],
+      "hookHint": "書き出しの作り方のヒント"
+    }
+  ],
+  "summary": "このアカウントの勝ちパターンの総括 (推定であることを前提に)"
+}
+
+winningPatterns は2〜3個。分析は推定であり断定しないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
+    return extractJson<BatchAnalysisResult>(raw);
+  }
+
+  async scoreDrafts(input: {
+    drafts: { label: string; text: string }[];
+    genre: string;
+    brand?: unknown;
+  }): Promise<DraftScore[]> {
+    const client = createClient();
+
+    const draftsSection = input.drafts
+      .map((d, i) => `--- 案${i + 1} (${d.label}) ---\n${d.text}`)
+      .join("\n\n");
+
+    const prompt = `次のX投稿案を評価してください。ジャンル: ${input.genre}
+${input.brand ? `発信者情報: ${JSON.stringify(input.brand)}` : ""}
+
+${draftsSection}
+
+各案について10軸 (各0〜10点) で採点し、総合点 (0〜100) を付けてください。
+これは保証ではなくAIによる予測であることを前提に、辛口で採点してください。
+
+次のJSON形式で回答してください:
+{
+  "scores": [
+    {
+      "total": 85,
+      "axes": {
+        "hook": 8, "relevance": 8, "specificity": 7, "novelty": 6,
+        "credibility": 7, "emotion": 7, "readability": 8,
+        "shareability": 6, "cta": 5, "brandFit": 8
+      },
+      "comment": "改善ポイントの一言"
+    }
+  ]
+}
+
+scores の順序は案の順序と一致させること。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    const parsed = extractJson<{ scores: DraftScore[] }>(raw);
+
+    if (!Array.isArray(parsed.scores) || parsed.scores.length !== input.drafts.length) {
+      throw new Error("AIから有効なスコアが返りませんでした。");
+    }
+    return parsed.scores;
   }
 }

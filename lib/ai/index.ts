@@ -5,7 +5,9 @@ import { ClaudeAiProvider } from "@/lib/ai/claude";
 import { MockAiProvider } from "@/lib/ai/mock";
 import type {
   AiProvider,
+  BatchAnalysisResult,
   DraftResult,
+  DraftScore,
   PostAnalysisResult,
   StructureBlock,
 } from "@/lib/ai/provider";
@@ -62,6 +64,33 @@ export class AiService {
       endpoint: "ai.generateDrafts",
       units: 1,
       run: async () => ({ result: await this.provider.generateDrafts(input) }),
+    });
+  }
+
+  async analyzeBatch(input: {
+    posts: { text: string; outlierScore: number }[];
+    accountHandle: string;
+  }): Promise<BatchAnalysisResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.analyzeBatch",
+      units: 1,
+      run: async () => ({ result: await this.provider.analyzeBatch(input) }),
+    });
+  }
+
+  async scoreDrafts(input: {
+    drafts: { label: string; text: string }[];
+    genre: string;
+    brand?: unknown;
+  }): Promise<DraftScore[]> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.scoreDrafts",
+      units: 1,
+      run: async () => ({ result: await this.provider.scoreDrafts(input) }),
     });
   }
 }

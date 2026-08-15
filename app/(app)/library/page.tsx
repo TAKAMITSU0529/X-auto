@@ -38,6 +38,11 @@ export default async function LibraryPage({
     },
   });
 
+  const patterns = await prisma.winningPattern.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
   const allTags = Array.from(
     new Set(
       (
@@ -55,6 +60,58 @@ export default async function LibraryPage({
         title="MODEL LIBRARY"
         description="モデリングの元にしたい投稿の保管庫です。ここに貯めた投稿の「型」を転用して自分の投稿を生成します。"
       />
+
+      {patterns.length > 0 ? (
+        <div className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold text-ink-900">
+            WINNING PATTERN（一括分析から自動抽出）
+          </h2>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {patterns.map((pattern) => {
+              const json = pattern.patternJson as {
+                description?: string;
+                steps?: string[];
+                hookHint?: string;
+                sourceAccount?: string;
+              };
+              return (
+                <Card key={pattern.id}>
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-ink-900">
+                      {pattern.name}
+                    </p>
+                    {pattern.avgPerformance ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                        平均 通常の{Number(pattern.avgPerformance).toFixed(1)}倍
+                      </span>
+                    ) : null}
+                    <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">
+                      AI推定
+                    </span>
+                  </div>
+                  {json.description ? (
+                    <p className="text-xs text-ink-600">{json.description}</p>
+                  ) : null}
+                  {json.steps?.length ? (
+                    <p className="mt-1.5 text-xs text-ink-400">
+                      {json.steps.join(" → ")}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-ink-400">
+                    {json.sourceAccount ? `@${json.sourceAccount} · ` : ""}
+                    抽出元 {pattern.sourcePostIds.length} 投稿
+                  </p>
+                  <div className="mt-3">
+                    <NextActionButton href={`/generate?pattern=${pattern.id}`}>
+                      この型で作る
+                    </NextActionButton>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {allTags.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">

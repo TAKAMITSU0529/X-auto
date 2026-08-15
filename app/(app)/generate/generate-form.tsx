@@ -9,13 +9,22 @@ const initialState: GenerateState = { error: null };
 
 const PURPOSES = ["認知", "共感", "教育", "販売", "その他"];
 
-export function GenerateForm({ sourcePostId }: { sourcePostId?: string }) {
+export function GenerateForm({
+  sourcePostId,
+  patternId,
+}: {
+  sourcePostId?: string;
+  patternId?: string;
+}) {
   const [state, formAction] = useActionState(generateAction, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
       {sourcePostId ? (
         <input type="hidden" name="sourcePostId" value={sourcePostId} />
+      ) : null}
+      {patternId ? (
+        <input type="hidden" name="patternId" value={patternId} />
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">

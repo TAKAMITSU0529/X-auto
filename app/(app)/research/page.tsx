@@ -20,6 +20,7 @@ import {
   formatPercent,
 } from "@/components/ui";
 import { ResearchForm } from "./research-form";
+import { BatchAnalyzeForm } from "./batch-form";
 
 const SORT_KEYS = Object.keys(SORT_LABELS) as RankingSortKey[];
 
@@ -120,8 +121,12 @@ export default async function ResearchPage({
 
               <DataNote>
                 外れ値スコアは「その投稿のエンゲージメント率 ÷ このアカウントの通常エンゲージメント率（中央値）」で算出した実測値です。
-                投稿が伸びた理由の解釈はAI分析（次スライスで実装）が担当します。
+                SCORE は外れ値・量・質・新しさを合成した X AUTO IMPACT SCORE です。伸びた理由の解釈は各投稿の「この投稿を分析」から確認できます。
               </DataNote>
+
+              <Card>
+                <BatchAnalyzeForm accountId={accountId!} />
+              </Card>
 
               <Card>
                 <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -159,6 +164,12 @@ export default async function ResearchPage({
                           <div className="min-w-0 flex-1">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
                               <OutlierBadge score={post.outlierScore} />
+                              <span
+                                className="rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-700"
+                                title="X AUTO IMPACT SCORE (実測値からの合成指標)"
+                              >
+                                SCORE {post.impactScore}
+                              </span>
                               <span className="text-xs text-ink-400">
                                 ER {formatPercent(post.engagementRate)}
                                 {post.engagementBasis === "followers"

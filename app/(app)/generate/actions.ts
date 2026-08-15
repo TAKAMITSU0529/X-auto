@@ -11,6 +11,7 @@ export type GenerateState = { error: string | null };
 
 const generateSchema = z.object({
   sourcePostId: z.string().optional(),
+  patternId: z.string().optional(),
   genre: z.string().trim().min(1, "ジャンルを入力してください").max(60),
   message: z
     .string()
@@ -29,6 +30,7 @@ export async function generateAction(
 
   const parsed = generateSchema.safeParse({
     sourcePostId: formData.get("sourcePostId") || undefined,
+    patternId: formData.get("patternId") || undefined,
     genre: formData.get("genre"),
     message: formData.get("message"),
     experience: formData.get("experience") || undefined,
@@ -44,6 +46,7 @@ export async function generateAction(
     const result = await generateThreeDrafts({
       userId,
       sourcePostId: parsed.data.sourcePostId,
+      winningPatternId: parsed.data.patternId,
       genre: parsed.data.genre,
       message: parsed.data.message,
       experience: parsed.data.experience,
@@ -62,7 +65,9 @@ export async function generateAction(
   revalidatePath("/generate");
   const sourceParam = parsed.data.sourcePostId
     ? `&source=${parsed.data.sourcePostId}`
-    : "";
+    : parsed.data.patternId
+      ? `&pattern=${parsed.data.patternId}`
+      : "";
   redirect(`/generate?g=${generatedPostId}${sourceParam}`);
 }
 

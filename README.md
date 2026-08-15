@@ -93,9 +93,18 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-25 | API USAGE 記録・BUDGET LIMIT 強制・24時間キャッシュ |
 | F-21 | ダッシュボード（数値サマリー・今日の予約投稿・失敗アラート・次にやること・外れ値トップ3） |
 
-### 未実装（Phase 2 以降）
+### 完了：Phase 2 スライスA
 
-- 予測スコア・IMPACT SCORE・一括分析・WINNING PATTERN 自動生成・時間帯/テーマ/HOOK分析・週次AIレポート・Personal Growth Model・コンテンツカレンダー（月表示）・画像/スレッド投稿 など要件定義 §10 参照
+| 機能 | 内容 |
+|---|---|
+| F-15 | **X AUTO IMPACT SCORE**（外れ値・量・ER・反応の質・新しさの加重合成 0〜100。ランキングのソート軸に追加） |
+| F-04 一括 | **複数投稿の一括分析**（外れ値上位20件を横断分析：共通構造・HOOK・テーマ・感情・CTA・形式） |
+| F-16 自動生成 | **WINNING PATTERN 自動抽出**（一括分析から勝ちパターンを保存。ライブラリから「この型で作る」で生成に転用） |
+| F-06 予測スコア | **AI予測反応スコア**（10軸評価＋総合点を3案それぞれに付与。強み/弱みの表示。保証ではなくAI推定として明示） |
+
+### 未実装（Phase 2 残り以降）
+
+- 時間帯/テーマ/HOOK/形式分析・週次AIレポート＋NEXT BEST ACTION・Personal Growth Model・AI INSIGHT・検索/フィルタ・コンテンツカレンダー（月表示）・画像/スレッド投稿・CSV出力 など要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -133,6 +142,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-slice2.ts` | スライス2の受け入れ確認（トークン暗号化・PKCE/認可URL） |
 | `npx tsx scripts/verify-slice3.ts` | スライス3の受け入れ確認（類似度チェック・3案生成・丸写し拒否） |
 | `npx tsx scripts/verify-slice4.ts` | スライス4の受け入れ確認（予約→投稿→自己投稿化→スナップショット・重複ブロック） |
+| `npx tsx scripts/verify-phase2a.ts` | Phase 2 スライスAの受け入れ確認（IMPACT SCORE・一括分析・勝ちパターン・予測スコア） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック
