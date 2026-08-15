@@ -43,6 +43,16 @@ export type XPost = {
   metrics: XPostMetrics;
 };
 
+/**
+ * 自己投稿のメトリクス (F-10)。
+ * urlClicks / profileClicks は非公開指標のため、取得できない場合
+ * (権限不足・投稿後30日超過) は null になる。
+ */
+export type OwnPostMetricsData = XPostMetrics & {
+  urlClicks: number | null;
+  profileClicks: number | null;
+};
+
 export type TimelineOptions = {
   /** 取得件数の上限 */
   maxResults: number;
@@ -76,6 +86,12 @@ export interface XApiClient {
     accessToken: string;
     text: string;
   }): Promise<{ xPostId: string }>;
+
+  /** 自分の投稿のメトリクスを取得する (F-10。非公開指標を含む) */
+  getOwnPostMetrics(args: {
+    xPostId: string;
+    accessToken: string;
+  }): Promise<OwnPostMetricsData>;
 }
 
 /** 総エンゲージメント数 */

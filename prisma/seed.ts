@@ -163,6 +163,94 @@ async function main() {
     }
   }
 
+  // --- 自己投稿分析のデモデータ (F-10) ---------------------------------
+  // モック連携アカウントと、投稿済みの自己投稿+スナップショット履歴を作り、
+  // ログイン直後から自己分析画面にデータが見える状態にする。
+  const xAccount = await prisma.xAccount.upsert({
+    where: {
+      userId_xUserId: { userId: user.id, xUserId: `mock-self-${user.id}` },
+    },
+    update: {},
+    create: {
+      userId: user.id,
+      xUserId: `mock-self-${user.id}`,
+      handle: "my_mock_account",
+      displayName: "自分のアカウント（モック）",
+      scopes: ["tweet.read", "tweet.write", "users.read", "offline.access"],
+      lastSyncedAt: fetchedAt,
+    },
+  });
+
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  const ownPostSeeds = [
+    {
+      text: "AIツールを10個試すより、1個を全員が使い切る方が成果が出ます。\n\n先月支援した製造業のクライアントは、経理部だけの先行導入で月20時間削減。ツール選定より定着設計です。",
+      ageMs: 10 * DAY,
+      labels: ["1h", "6h", "24h", "3d", "7d"],
+      base: { impressions: 12400, likes: 96, reposts: 18, quotes: 3, replies: 11, bookmarks: 41, urlClicks: 52, profileClicks: 89 },
+    },
+    {
+      text: "正直に言うと、最初のAI導入支援は失敗でした。\n\n全部署一斉に入れて、誰も使わなくなった。いまは必ず1部署・1業務・1ヶ月から始めます。小さく回して事例を作るのが一番速い。",
+      ageMs: 4 * DAY,
+      labels: ["1h", "6h", "24h", "3d"],
+      base: { impressions: 28900, likes: 342, reposts: 67, quotes: 12, replies: 38, bookmarks: 156, urlClicks: 134, profileClicks: 287 },
+    },
+    {
+      text: "経営者向けのAI活用相談で一番多い質問は「何から始めればいいか」。\n\n答えはシンプルで、一番人が時間を使っている作業からです。ツールの話はその後。",
+      ageMs: 26 * HOUR,
+      labels: ["1h", "6h", "24h"],
+      base: { impressions: 8200, likes: 54, reposts: 9, quotes: 1, replies: 6, bookmarks: 22, urlClicks: 18, profileClicks: 47 },
+    },
+  ];
+
+  for (const [i, seedPost] of ownPostSeeds.entries()) {
+    const postedAt = new Date(fetchedAt.getTime() - seedPost.ageMs);
+    const ownPost = await prisma.ownPost.upsert({
+      where: { xPostId: `mock-own-${user.id}-${i}` },
+      update: {},
+      create: {
+        xAccountId: xAccount.id,
+        xPostId: `mock-own-${user.id}-${i}`,
+        text: seedPost.text,
+        postedAt,
+        permalink: `https://x.com/my_mock_account/status/mock-own-${i}`,
+      },
+    });
+
+    // スナップショットごとに成長カーブを付けて記録する
+    const growthByLabel: Record<string, number> = {
+      "1h": 0.25, "6h": 0.55, "24h": 0.85, "3d": 0.95, "7d": 1.0, "14d": 1.0, "30d": 1.0,
+    };
+    const offsetByLabel: Record<string, number> = {
+      "1h": HOUR, "6h": 6 * HOUR, "24h": DAY, "3d": 3 * DAY, "7d": 7 * DAY, "14d": 14 * DAY, "30d": 30 * DAY,
+    };
+
+    for (const label of seedPost.labels) {
+      const g = growthByLabel[label];
+      await prisma.ownPostMetric.upsert({
+        where: {
+          ownPostId_snapshotLabel: { ownPostId: ownPost.id, snapshotLabel: label },
+        },
+        update: {},
+        create: {
+          ownPostId: ownPost.id,
+          snapshotLabel: label,
+          impressions: Math.floor(seedPost.base.impressions * g),
+          likes: Math.floor(seedPost.base.likes * g),
+          reposts: Math.floor(seedPost.base.reposts * g),
+          quotes: Math.floor(seedPost.base.quotes * g),
+          replies: Math.floor(seedPost.base.replies * g),
+          bookmarks: Math.floor(seedPost.base.bookmarks * g),
+          urlClicks: Math.floor(seedPost.base.urlClicks * g),
+          profileClicks: Math.floor(seedPost.base.profileClicks * g),
+          fetchedAt: new Date(postedAt.getTime() + offsetByLabel[label]),
+        },
+      });
+    }
+  }
+  console.log("  自己投稿デモデータ: 3件 (スナップショット付き)");
+
   console.log("\n完了しました。");
   console.log(`  ログイン: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
 }

@@ -1,4 +1,5 @@
 import type {
+  OwnPostMetricsData,
   TimelineOptions,
   XApiClient,
   XPost,
@@ -199,5 +200,42 @@ export class MockXApiClient implements XApiClient {
     text: string;
   }): Promise<{ xPostId: string }> {
     return { xPostId: `mock-created-${seedFrom(args.text)}-${Date.now()}` };
+  }
+
+  /**
+   * 自己投稿メトリクスのモック。
+   * 投稿IDから決定的に生成しつつ、呼び出し時刻に応じて数値が伸びる
+   * (スナップショット履歴で成長が見えるようにするため)。
+   */
+  async getOwnPostMetrics(args: {
+    xPostId: string;
+    accessToken: string;
+  }): Promise<OwnPostMetricsData> {
+    const rng = createRng(seedFrom(args.xPostId));
+    const baseImpressions = 2_000 + Math.floor(rng() * 20_000);
+    const engagementRate = 0.005 + rng() * 0.02;
+
+    // 経過時間に応じた成長カーブ (最初の1日で大半が付く)
+    const hoursKey = Math.floor(Date.now() / (30 * 60 * 1000)); // 30分刻みで変化
+    const growth = Math.min(1, 0.3 + (hoursKey % 48) / 48);
+
+    const impressions = Math.floor(baseImpressions * growth);
+    const engagements = Math.floor(impressions * engagementRate);
+    const likes = Math.floor(engagements * 0.65);
+    const reposts = Math.floor(engagements * 0.12);
+    const quotes = Math.floor(engagements * 0.03);
+    const replies = Math.floor(engagements * 0.08);
+    const bookmarks = Math.max(0, engagements - likes - reposts - quotes - replies);
+
+    return {
+      impressions,
+      likes,
+      reposts,
+      quotes,
+      replies,
+      bookmarks,
+      urlClicks: Math.floor(impressions * 0.004),
+      profileClicks: Math.floor(impressions * 0.008),
+    };
   }
 }

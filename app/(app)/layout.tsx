@@ -13,6 +13,8 @@ const NAV = [
   { href: "/research", label: "リサーチ" },
   { href: "/library", label: "ライブラリ" },
   { href: "/generate", label: "生成スタジオ" },
+  { href: "/schedule", label: "予約投稿" },
+  { href: "/analytics", label: "自己分析" },
   { href: "/brand", label: "MY BRAND" },
   { href: "/settings", label: "設定" },
 ];

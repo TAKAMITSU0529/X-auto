@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import type {
+  OwnPostMetricsData,
   TimelineOptions,
   XApiClient,
   XPost,
@@ -253,5 +254,66 @@ export class RealXApiClient implements XApiClient {
       body: { text: args.text },
     });
     return { xPostId: result.data.id };
+  }
+
+  /**
+   * 自分の投稿のメトリクス取得。ユーザーコンテキストのトークンが必要。
+   * non_public_metrics (URLクリック・プロフィールクリック) は投稿後30日を
+   * 過ぎると取得できないため、その場合は public_metrics のみで null を返す。
+   */
+  async getOwnPostMetrics(args: {
+    xPostId: string;
+    accessToken: string;
+  }): Promise<OwnPostMetricsData> {
+    type MetricsResponse = {
+      data?: {
+        public_metrics?: {
+          impression_count?: number;
+          like_count: number;
+          retweet_count: number;
+          quote_count?: number;
+          reply_count: number;
+          bookmark_count?: number;
+        };
+        non_public_metrics?: {
+          impression_count?: number;
+          url_link_clicks?: number;
+          user_profile_clicks?: number;
+        };
+      };
+    };
+
+    const fetchWith = (fields: string) =>
+      callXApi<MetricsResponse>(`/tweets/${args.xPostId}`, {
+        token: args.accessToken,
+        searchParams: { "tweet.fields": fields },
+      });
+
+    let response: MetricsResponse;
+    try {
+      response = await fetchWith("public_metrics,non_public_metrics");
+    } catch (error) {
+      // 30日超過・権限不足では non_public_metrics 指定自体がエラーになるため
+      // public_metrics だけで取り直す
+      if (error instanceof XApiError && error.status < 500) {
+        response = await fetchWith("public_metrics");
+      } else {
+        throw error;
+      }
+    }
+
+    const pub = response.data?.public_metrics;
+    const priv = response.data?.non_public_metrics;
+
+    return {
+      impressions: priv?.impression_count ?? pub?.impression_count ?? 0,
+      likes: pub?.like_count ?? 0,
+      reposts: pub?.retweet_count ?? 0,
+      quotes: pub?.quote_count ?? 0,
+      replies: pub?.reply_count ?? 0,
+      bookmarks: pub?.bookmark_count ?? 0,
+      urlClicks: priv?.url_link_clicks ?? null,
+      profileClicks: priv?.user_profile_clicks ?? null,
+    };
   }
 }

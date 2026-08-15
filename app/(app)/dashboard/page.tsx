@@ -18,20 +18,51 @@ import {
 export default async function DashboardPage() {
   const userId = await requireUserId();
 
-  const [accountCount, postCount, latestJob, budget, recentAccount] =
-    await Promise.all([
-      prisma.benchmarkAccount.count({ where: { list: { userId } } }),
-      prisma.post.count({ where: { benchmarkAccount: { list: { userId } } } }),
-      prisma.researchJob.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      }),
-      getBudgetStatus(userId),
-      prisma.benchmarkAccount.findFirst({
-        where: { list: { userId }, lastAnalyzedAt: { not: null } },
-        orderBy: { lastAnalyzedAt: "desc" },
-      }),
-    ]);
+  const now = new Date();
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const [
+    accountCount,
+    postCount,
+    latestJob,
+    budget,
+    recentAccount,
+    todayScheduled,
+    draftCount,
+    failedCount,
+  ] = await Promise.all([
+    prisma.benchmarkAccount.count({ where: { list: { userId } } }),
+    prisma.post.count({ where: { benchmarkAccount: { list: { userId } } } }),
+    prisma.researchJob.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    getBudgetStatus(userId),
+    prisma.benchmarkAccount.findFirst({
+      where: { list: { userId }, lastAnalyzedAt: { not: null } },
+      orderBy: { lastAnalyzedAt: "desc" },
+    }),
+    prisma.scheduledPost.findMany({
+      where: {
+        generatedPost: { userId },
+        status: "scheduled",
+        scheduledAt: { lte: endOfToday },
+      },
+      orderBy: { scheduledAt: "asc" },
+      take: 3,
+    }),
+    prisma.generatedPost.count({
+      where: {
+        userId,
+        status: { in: ["draft", "approved"] },
+        selectedText: { not: null },
+      },
+    }),
+    prisma.scheduledPost.count({
+      where: { generatedPost: { userId }, status: "failed" },
+    }),
+  ]);
 
   const ranking = recentAccount
     ? await getRankedPosts({
@@ -99,14 +130,40 @@ export default async function DashboardPage() {
             />
           )}
 
-          <div className="mt-4 space-y-2 text-sm text-ink-500">
+          <div className="mt-4 space-y-2 border-t border-ink-100 pt-4 text-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
-              このスライスで未実装
+              予約状況
             </p>
-            <ul className="list-inside list-disc space-y-1 text-xs">
-              <li>予約投稿とコンテンツカレンダー</li>
-              <li>自己投稿分析（AI INSIGHT）</li>
-            </ul>
+            {failedCount > 0 ? (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                失敗した予約投稿が {failedCount} 件あります。
+                <Link href="/schedule" className="ml-1 font-semibold underline">
+                  確認する
+                </Link>
+              </p>
+            ) : null}
+            {todayScheduled.length > 0 ? (
+              <ul className="space-y-1.5">
+                {todayScheduled.map((item) => (
+                  <li key={item.id} className="flex items-baseline gap-2 text-xs">
+                    <span className="shrink-0 font-semibold tabular-nums text-brand-700">
+                      {formatDateTime(item.scheduledAt)}
+                    </span>
+                    <span className="line-clamp-1 text-ink-600">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-ink-500">
+                今日の予約投稿はありません。
+                {draftCount > 0
+                  ? `未予約の下書きが ${draftCount} 件あります。`
+                  : ""}
+                <Link href="/schedule" className="ml-1 text-brand-600 underline">
+                  予約投稿へ
+                </Link>
+              </p>
+            )}
           </div>
         </Card>
 

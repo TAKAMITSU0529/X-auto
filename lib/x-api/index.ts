@@ -5,6 +5,7 @@ import { recordCachedUsage, withApiGuard } from "@/lib/usage/guard";
 import { MockXApiClient } from "@/lib/x-api/mock";
 import { RealXApiClient } from "@/lib/x-api/real";
 import type {
+  OwnPostMetricsData,
   TimelineOptions,
   XApiClient,
   XPost,
@@ -113,6 +114,20 @@ export class XApiService {
       endpoint: hasUrl ? "posts.createWithUrl" : "posts.create",
       units: 1,
       run: async () => ({ result: await this.client.createPost(args) }),
+    });
+  }
+
+  /** 自己投稿メトリクスの取得 (Owned Reads は単価が安い。§7.1) */
+  async getOwnPostMetrics(args: {
+    xPostId: string;
+    accessToken: string;
+  }): Promise<OwnPostMetricsData> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.x,
+      endpoint: "posts.ownRead",
+      units: 1,
+      run: async () => ({ result: await this.client.getOwnPostMetrics(args) }),
     });
   }
 
