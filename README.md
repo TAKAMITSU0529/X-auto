@@ -108,7 +108,7 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-19 補正 | **Personal Growth Model 補正**（本人実績3件以上で、伸びているHOOK/形式に一致する案の予測スコアを加点。補正理由と基礎点を明示） |
 | F-02 出力 | **CSVエクスポート**（ランキングをBOM付きUTF-8でダウンロード） |
 
-### 完了：Phase 3 スライスA〜C
+### 完了：Phase 3 全スライス（A〜E）
 
 | 機能 | 内容 |
 |---|---|
@@ -118,10 +118,12 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-12 | **ポジショニング分析＋プロフィール生成**（登録済み競合を2軸マップに配置、空きポジション仮説、POSITIONING SCORE、名前欄/bio/固定ポスト/ヘッダーコピーの3案生成。DB内の公開プロフィールのみ使用でAPIコスト0） |
 | F-09 | **マーケティング戦略AI**（WHO/WHAT/WHY/HOW 設定ウィザード・CUSTOMER INSIGHT（本音9項目の仮説化。必ず「マーケティング仮説」表示）・MARKETING PLAYBOOK（原則別アドバイス＋リスト動線＋CUSTOMER JOURNEY）。投稿生成が常に参照し、投稿ごとにJOURNEY段階を指定可能） |
 | F-17 | **KNOWLEDGE BASE**（考え方・経験・失敗談・事例・商品情報の蓄積。生成時は競合投稿より本人の一次情報を優先参照。関連度はバイグラム一致で自動選択） |
+| F-18 | **CONTENT PILLARS・投稿比率設計**（発信テーマの柱（最大6本）と目標比率＋目的別比率（Reach/Authority/Trust/Education/Conversion）を設計。直近の自己投稿をキーワード一致で分類＝DATA扱い・AIコスト0でズレを可視化し、不足テーマから生成へワンクリック連携） |
+| F-13 | **競合マネタイズ動線分析＋FUNNEL MAP**（登録済み競合の公開情報（bio・URL・投稿内CTA）から収益タイプと導線を分析。「確認済み」と「推定」を必ず区別表示、収益額等の非公開情報は推測しない。「自分が転用するならこの動線」の提案付き。外部サイトのクロールはせずDB内データのみでX APIコスト0） |
 
 ### 未実装（以降）
 
-- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-13 動線分析・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
+- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -166,6 +168,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase3b.ts` | Phase 3 スライスBの受け入れ確認（競合発見・COMPETITOR SCORE） |
 | `npx tsx scripts/verify-phase3c.ts` | Phase 3 スライスCの受け入れ確認（ポジショニング・プロフィール3案） |
 | `npx tsx scripts/verify-phase3d.ts` | Phase 3 スライスDの受け入れ確認（マーケティング戦略AI・KNOWLEDGE BASE） |
+| `npx tsx scripts/verify-phase3e.ts` | Phase 3 スライスEの受け入れ確認（CONTENT PILLARS・動線分析） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック
