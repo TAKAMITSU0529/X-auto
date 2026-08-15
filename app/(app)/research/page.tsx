@@ -193,9 +193,7 @@ export default async function ResearchPage({
                                 この投稿を分析
                               </NextActionButton>
                               <NextActionButton
-                                href="#"
-                                disabled
-                                title="スライス3で実装予定"
+                                href={`/generate?source=${post.id}`}
                               >
                                 この型で作る
                               </NextActionButton>

@@ -7,6 +7,7 @@ const PROTECTED_PREFIXES = [
   "/research",
   "/benchmarks",
   "/library",
+  "/generate",
   "/brand",
   "/posts",
   "/settings",

@@ -138,7 +138,7 @@ export default async function LibraryPage({
                   <NextActionButton href={`/posts/${post.id}`}>
                     分析カードを開く
                   </NextActionButton>
-                  <NextActionButton href="#" disabled title="スライス3で実装予定">
+                  <NextActionButton href={`/generate?source=${post.id}`}>
                     この型で作る
                   </NextActionButton>
                 </div>

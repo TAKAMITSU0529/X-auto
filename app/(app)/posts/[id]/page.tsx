@@ -276,7 +276,7 @@ export default async function PostDetailPage({
             </h2>
             <div className="space-y-3">
               <AnalyzeButton postId={post.id} analyzed={Boolean(analysis)} />
-              <NextActionButton href="#" disabled title="スライス3で実装予定">
+              <NextActionButton href={`/generate?source=${post.id}`}>
                 この型で作る（3案生成）
               </NextActionButton>
             </div>

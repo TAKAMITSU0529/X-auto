@@ -104,8 +104,6 @@ export default async function DashboardPage() {
               このスライスで未実装
             </p>
             <ul className="list-inside list-disc space-y-1 text-xs">
-              <li>X アカウント連携（OAuth 2.0 PKCE）</li>
-              <li>投稿のAI分析・モデリング・3案生成</li>
               <li>予約投稿とコンテンツカレンダー</li>
               <li>自己投稿分析（AI INSIGHT）</li>
             </ul>
@@ -130,25 +128,27 @@ export default async function DashboardPage() {
               </p>
               <ul className="space-y-3">
                 {ranking.posts.map((post) => (
-                  <li
-                    key={post.id}
-                    className="rounded-lg border border-ink-200 p-3"
-                  >
-                    <div className="mb-1.5 flex items-center gap-2">
-                      <OutlierBadge score={post.outlierScore} />
-                      <span className="text-xs text-ink-400">
-                        いいね {formatNumber(post.metrics.likes)}
-                      </span>
-                    </div>
-                    <p className="line-clamp-3 whitespace-pre-wrap text-sm text-ink-700">
-                      {post.text}
-                    </p>
+                  <li key={post.id}>
+                    <Link
+                      href={`/posts/${post.id}`}
+                      className="block rounded-lg border border-ink-200 p-3 transition hover:border-brand-300 hover:bg-brand-50"
+                    >
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <OutlierBadge score={post.outlierScore} />
+                        <span className="text-xs text-ink-400">
+                          いいね {formatNumber(post.metrics.likes)}
+                        </span>
+                      </div>
+                      <p className="line-clamp-3 whitespace-pre-wrap text-sm text-ink-700">
+                        {post.text}
+                      </p>
+                    </Link>
                   </li>
                 ))}
               </ul>
               <div className="mt-4">
                 <HypothesisNote>
-                  これらが伸びた理由の分析は、次スライスで実装する投稿AI分析（F-04）が担当します。
+                  投稿を開くと、なぜ伸びたのかを10項目のAI分析カードで確認できます。
                 </HypothesisNote>
               </div>
             </>
