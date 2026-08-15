@@ -12,6 +12,7 @@ import {
   formatPercent,
 } from "@/components/ui";
 import { BudgetForm } from "./budget-form";
+import { XConnectSection } from "./x-connect-section";
 
 function startOfMonth(): Date {
   const now = new Date();
@@ -25,10 +26,15 @@ function startOfToday(): Date {
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ x?: string; reason?: string }>;
+}) {
   const userId = await requireUserId();
+  const { x: xStatus, reason: xReason } = await searchParams;
 
-  const [setting, budget, monthly, today, byEndpoint] = await Promise.all([
+  const [setting, budget, monthly, today, byEndpoint, xAccounts] = await Promise.all([
     getOrCreateBudgetSetting(userId),
     getBudgetStatus(userId),
     prisma.apiUsage.aggregate({
@@ -45,6 +51,10 @@ export default async function SettingsPage() {
       where: { userId, createdAt: { gte: startOfMonth() } },
       _sum: { units: true, estimatedCostUsd: true },
       _count: true,
+    }),
+    prisma.xAccount.findMany({
+      where: { userId },
+      orderBy: { connectedAt: "asc" },
     }),
   ]);
 
@@ -67,6 +77,21 @@ export default async function SettingsPage() {
       />
 
       <div className="space-y-6">
+        <XConnectSection
+          accounts={xAccounts.map((a) => ({
+            id: a.id,
+            handle: a.handle,
+            displayName: a.displayName,
+            connectedAt: a.connectedAt.toISOString(),
+            lastSyncedAt: a.lastSyncedAt?.toISOString() ?? null,
+            tokenExpiresAt: a.tokenExpiresAt?.toISOString() ?? null,
+            hasToken: Boolean(a.accessTokenEncrypted),
+          }))}
+          mockMode={isMockMode()}
+          status={xStatus}
+          reason={xReason}
+        />
+
         <section>
           <h2 className="mb-3 text-sm font-semibold text-ink-900">
             API USAGE — 今月の利用状況

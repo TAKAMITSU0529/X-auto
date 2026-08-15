@@ -11,6 +11,8 @@ const NAV = [
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/benchmarks", label: "ベンチマーク" },
   { href: "/research", label: "リサーチ" },
+  { href: "/library", label: "ライブラリ" },
+  { href: "/brand", label: "MY BRAND" },
   { href: "/settings", label: "設定" },
 ];
 

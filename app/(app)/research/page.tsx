@@ -189,17 +189,13 @@ export default async function ResearchPage({
 
                             {/* 3段目: 次にやること (要件定義 §8.1 / §59) */}
                             <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <NextActionButton
-                                href="#"
-                                disabled
-                                title="次スライスで実装予定"
-                              >
+                              <NextActionButton href={`/posts/${post.id}`}>
                                 この投稿を分析
                               </NextActionButton>
                               <NextActionButton
                                 href="#"
                                 disabled
-                                title="次スライスで実装予定"
+                                title="スライス3で実装予定"
                               >
                                 この型で作る
                               </NextActionButton>
