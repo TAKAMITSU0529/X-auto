@@ -6,6 +6,10 @@ import {
   checkSimilarity,
   type SimilarityResult,
 } from "@/lib/text/similarity";
+import {
+  applyPersonalCorrection,
+  type PersonallyAdjustedScore,
+} from "@/lib/generation/personal-model";
 
 /**
  * 投稿生成 (要件定義 F-05 モデリング再生成 / F-06 3案生成) の中核処理。
@@ -38,7 +42,7 @@ export type GenerationResult = {
   generatedPostId: string;
   drafts: DraftWithSimilarity[];
   sourceText: string | null;
-  predictedScores: DraftScore[] | null;
+  predictedScores: PersonallyAdjustedScore[] | null;
 };
 
 export async function generateThreeDrafts(
@@ -120,13 +124,19 @@ export async function generateThreeDrafts(
     similarity: sourcePost ? checkSimilarity(draft.text, sourcePost.text) : null,
   }));
 
-  // AI予測反応スコア (F-06)。失敗しても生成自体は成立させる
-  let predictedScores: DraftScore[] | null = null;
+  // AI予測反応スコア (F-06)。失敗しても生成自体は成立させる。
+  // スコアには Personal Growth Model (F-19) の本人データ補正を適用する。
+  let predictedScores: PersonallyAdjustedScore[] | null = null;
   try {
-    predictedScores = await ai.scoreDrafts({
+    const baseScores: DraftScore[] = await ai.scoreDrafts({
       drafts: drafts.map((d) => ({ label: d.label, text: d.text })),
       genre: input.genre,
       brand: brand?.basicInfoJson ?? undefined,
+    });
+    predictedScores = await applyPersonalCorrection({
+      userId: input.userId,
+      drafts,
+      scores: baseScores,
     });
   } catch {
     predictedScores = null;

@@ -4,6 +4,9 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { DraftWithSimilarity } from "@/lib/generation/service";
 import type { DraftScore } from "@/lib/ai";
+import type { PersonallyAdjustedScore } from "@/lib/generation/personal-model";
+
+type ScoreLike = DraftScore & Partial<PersonallyAdjustedScore>;
 import { selectDraftAction, type SelectState } from "./actions";
 import { FormError, FormSuccess } from "@/components/form";
 
@@ -22,7 +25,7 @@ export function DraftPicker({
 }: {
   generatedPostId: string;
   drafts: DraftWithSimilarity[];
-  predictedScores: DraftScore[] | null;
+  predictedScores: ScoreLike[] | null;
   alreadySaved: boolean;
   savedIndex: number | null;
 }) {
@@ -64,6 +67,14 @@ export function DraftPicker({
                   AI予測 {predictedScores[index].total}点
                 </span>
               ) : null}
+              {predictedScores?.[index]?.personalAdjustment?.applied ? (
+                <span
+                  className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800"
+                  title={predictedScores[index].personalAdjustment!.reasons.join("\n")}
+                >
+                  あなたの実績で +{predictedScores[index].personalAdjustment!.delta}
+                </span>
+              ) : null}
             </div>
 
             <p className="mb-3 flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-800">
@@ -87,14 +98,27 @@ export function DraftPicker({
       </div>
 
       {predictedScores?.[selected] ? (
-        <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900">
-          <span className="mr-1.5 rounded bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
-            AI推定
-          </span>
-          {predictedScores[selected].comment}
-          <span className="ml-2 text-violet-600">
-            {formatAxes(predictedScores[selected])}
-          </span>
+        <div className="space-y-1.5">
+          <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900">
+            <span className="mr-1.5 rounded bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
+              AI推定
+            </span>
+            {predictedScores[selected].comment}
+            <span className="ml-2 text-violet-600">
+              {formatAxes(predictedScores[selected])}
+            </span>
+          </div>
+          {predictedScores[selected].personalAdjustment?.applied ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              <span className="mr-1.5 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                DATA
+              </span>
+              Personal Growth Model: あなたの投稿実績
+              {predictedScores[selected].personalAdjustment!.sampleSize}件に基づく補正
+              (基礎{predictedScores[selected].baseTotal}点 → {predictedScores[selected].total}点)。
+              {predictedScores[selected].personalAdjustment!.reasons.join(" / ")}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

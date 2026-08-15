@@ -133,6 +133,13 @@ export default async function ResearchPage({
                   <span className="text-sm font-semibold text-ink-900">
                     並び替え
                   </span>
+                  <a
+                    href={`/api/export/research?account=${accountId}&sort=${sortBy}`}
+                    className="order-last ml-auto rounded-md border border-ink-200 px-2.5 py-1 text-xs font-medium text-ink-600 transition hover:bg-ink-50"
+                    download
+                  >
+                    CSVダウンロード
+                  </a>
                   {SORT_KEYS.map((key) => (
                     <Link
                       key={key}
