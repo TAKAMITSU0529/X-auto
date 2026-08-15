@@ -1,0 +1,465 @@
+// X AUTO — Prisma スキーマ
+// 要件定義 docs/X-AUTO要件定義書-v2.0.md §6 に対応。
+//
+// 設計方針:
+//  - ユーザー所有データは全て userId を持つ (将来の SaaS 化 / マルチテナント対応・§1.5)
+//  - 外部APIから取得した「事実」と、AIが生成した「推定」はテーブルを分ける (§9)
+//  - メトリクスはスナップショット履歴として積む (非公開指標の30日制限対策・F-10)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// 認証・アカウント (F-01)
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  plan         String   @default("personal")
+  emailVerified DateTime? @map("email_verified")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  xAccounts       XAccount[]
+  benchmarkLists  BenchmarkList[]
+  researchJobs    ResearchJob[]
+  postAnalyses    PostAnalysis[]
+  modelPosts      ModelPost[]
+  winningPatterns WinningPattern[]
+  brandProfile    BrandProfile?
+  generatedPosts  GeneratedPost[]
+  apiUsages       ApiUsage[]
+  budgetSetting   BudgetSetting?
+
+  @@map("users")
+}
+
+/// 連携済み X アカウント。OAuth トークンは暗号化して保存する (§4 セキュリティ)。
+model XAccount {
+  id                    String    @id @default(cuid())
+  userId                String    @map("user_id")
+  xUserId               String    @map("x_user_id")
+  handle                String
+  displayName           String?   @map("display_name")
+  profileImageUrl       String?   @map("profile_image_url")
+  /// AES-256-GCM で暗号化した access token
+  accessTokenEncrypted  String?   @map("access_token_encrypted")
+  /// AES-256-GCM で暗号化した refresh token
+  refreshTokenEncrypted String?   @map("refresh_token_encrypted")
+  tokenExpiresAt        DateTime? @map("token_expires_at")
+  scopes                String[]  @default([])
+  connectedAt           DateTime  @default(now()) @map("connected_at")
+  lastSyncedAt          DateTime? @map("last_synced_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownPosts       OwnPost[]
+  scheduledPosts ScheduledPost[]
+
+  @@unique([userId, xUserId])
+  @@index([userId])
+  @@map("x_accounts")
+}
+
+// ---------------------------------------------------------------------------
+// ベンチマーク管理 (F-03)
+// ---------------------------------------------------------------------------
+
+model BenchmarkList {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  genreTag  String?  @map("genre_tag")
+  memo      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  favorite  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts BenchmarkAccount[]
+
+  @@index([userId])
+  @@map("benchmark_lists")
+}
+
+model BenchmarkAccount {
+  id             String    @id @default(cuid())
+  listId         String    @map("list_id")
+  xUserId        String    @map("x_user_id")
+  handle         String
+  displayName    String?   @map("display_name")
+  profile        String?
+  profileImageUrl String?  @map("profile_image_url")
+  url            String?
+  followers      Int       @default(0)
+  following      Int       @default(0)
+  postsCount     Int       @default(0) @map("posts_count")
+  genre          String?
+  tags           String[]  @default([])
+  memo           String?
+  registeredAt   DateTime  @default(now()) @map("registered_at")
+  lastAnalyzedAt DateTime? @map("last_analyzed_at")
+  /// フォロワー数などの推移を追うための時系列スナップショット
+  snapshot       Json?
+
+  list         BenchmarkList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  posts        Post[]
+  researchJobs ResearchJob[]
+
+  @@unique([listId, xUserId])
+  @@index([listId])
+  @@map("benchmark_accounts")
+}
+
+// ---------------------------------------------------------------------------
+// リサーチ・取得投稿 (F-02)
+// ---------------------------------------------------------------------------
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+model ResearchJob {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  benchmarkAccountId String?   @map("benchmark_account_id")
+  /// 取得対象 (@handle など)
+  target             String
+  /// 取得件数・期間・除外条件などの実行パラメータ
+  params             Json
+  status             JobStatus @default(pending)
+  fetchedCount       Int       @default(0) @map("fetched_count")
+  /// このジョブで発生した推定APIコスト (USD)
+  estimatedCostUsd   Decimal   @default(0) @db.Decimal(12, 6) @map("estimated_cost_usd")
+  /// キャッシュから返した件数 (§7.2 の効果測定用)
+  cacheHits          Int       @default(0) @map("cache_hits")
+  error              String?
+  startedAt          DateTime? @map("started_at")
+  finishedAt         DateTime? @map("finished_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmarkAccount BenchmarkAccount? @relation(fields: [benchmarkAccountId], references: [id], onDelete: SetNull)
+  posts            Post[]
+
+  @@index([userId, createdAt])
+  @@map("research_jobs")
+}
+
+/// X から取得した投稿そのもの (事実データ)。
+model Post {
+  id                 String   @id @default(cuid())
+  xPostId            String   @unique @map("x_post_id")
+  jobId              String?  @map("job_id")
+  benchmarkAccountId String?  @map("benchmark_account_id")
+  /// 投稿者の X ユーザーID (ベンチマーク未登録の著者も保持できるよう文字列で持つ)
+  authorXUserId      String   @map("author_x_user_id")
+  authorHandle       String   @map("author_handle")
+  text               String
+  lang               String?
+  hasMedia           Boolean  @default(false) @map("has_media")
+  mediaUrls          String[] @default([]) @map("media_urls")
+  isReply            Boolean  @default(false) @map("is_reply")
+  isRepost           Boolean  @default(false) @map("is_repost")
+  isQuote            Boolean  @default(false) @map("is_quote")
+  permalink          String?
+  postedAt           DateTime @map("posted_at")
+  fetchedAt          DateTime @default(now()) @map("fetched_at")
+
+  job              ResearchJob?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  benchmarkAccount BenchmarkAccount? @relation(fields: [benchmarkAccountId], references: [id], onDelete: Cascade)
+  metrics          PostMetric[]
+  analyses         PostAnalysis[]
+  modelPosts       ModelPost[]
+
+  @@index([benchmarkAccountId, postedAt])
+  @@index([authorXUserId, postedAt])
+  @@map("posts")
+}
+
+/// 投稿指標のスナップショット履歴。同じ投稿を複数時点で記録する (F-10)。
+model PostMetric {
+  id          String   @id @default(cuid())
+  postId      String   @map("post_id")
+  impressions Int      @default(0)
+  likes       Int      @default(0)
+  reposts     Int      @default(0)
+  quotes      Int      @default(0)
+  replies     Int      @default(0)
+  bookmarks   Int      @default(0)
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, fetchedAt])
+  @@index([postId, fetchedAt])
+  @@map("post_metrics")
+}
+
+// ---------------------------------------------------------------------------
+// AI分析・モデリング (F-04 / F-16)
+// ---------------------------------------------------------------------------
+
+/// AIによる投稿分析結果。事実ではなく推定を含むため §9 に従い表示側で明示する。
+model PostAnalysis {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  postId        String   @map("post_id")
+  theme         String?
+  targetAudience String? @map("target_audience")
+  /// ターゲットのインサイト (不満・欲求・不安・課題・理想・常識・思い込み)
+  insightJson   Json?    @map("insight_json")
+  /// 投稿構成のブロック分解
+  structureJson Json?    @map("structure_json")
+  templateType  String?  @map("template_type")
+  hook          String?
+  keywords      String[] @default([])
+  emotions      String[] @default([])
+  /// 具体性 (数字・実例・固有名詞・ストーリー)
+  specificityJson Json?  @map("specificity_json")
+  cta           String?
+  whyItWorks    String?  @map("why_it_works")
+  /// AIによる推定であることを示すフラグ (§9 HYPOTHESIS)
+  isHypothesis  Boolean  @default(true) @map("is_hypothesis")
+  model         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@map("post_analyses")
+}
+
+/// MODEL LIBRARY: 参考にしたい投稿の保存 (F-16)
+model ModelPost {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  postId       String   @map("post_id")
+  categoryTags String[] @default([]) @map("category_tags")
+  memo         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@map("model_posts")
+}
+
+/// 複数投稿の横断分析から抽出した勝ちパターン (F-16)
+model WinningPattern {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  name           String
+  patternJson    Json     @map("pattern_json")
+  avgPerformance Decimal? @db.Decimal(10, 4) @map("avg_performance")
+  sourcePostIds  String[] @default([]) @map("source_post_ids")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("winning_patterns")
+}
+
+// ---------------------------------------------------------------------------
+// MY BRAND (F-17)
+// ---------------------------------------------------------------------------
+
+model BrandProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  /// 名前・職業・会社・事業・経歴・専門分野・強み・実績・商品・サービス
+  basicInfoJson  Json?    @map("basic_info_json")
+  /// 発信スタイル (トーン・一人称・語尾など)
+  styleJson      Json?    @map("style_json")
+  /// 禁止事項 (言いたくない表現・扱わないテーマ・避ける言葉)
+  prohibitedJson Json?    @map("prohibited_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("brand_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// 投稿生成・投稿管理・予約投稿 (F-05 / F-06 / F-07)
+// ---------------------------------------------------------------------------
+
+/// 投稿ステータス (要件定義 F-07)
+enum PostStatus {
+  idea
+  draft
+  ai_generated
+  editing
+  approved
+  scheduled
+  published
+  reusable
+}
+
+model GeneratedPost {
+  id              String     @id @default(cuid())
+  userId          String     @map("user_id")
+  /// モデリング元の投稿ID・勝ちパターンIDなどの参照
+  sourceRefs      Json?      @map("source_refs")
+  /// 3案の本文と各案の狙い
+  draftsJson      Json       @map("drafts_json")
+  /// AI予測反応スコア (F-06・Phase 2)
+  predictedScores Json?      @map("predicted_scores")
+  /// 採用した案の本文 (編集後)
+  selectedText    String?    @map("selected_text")
+  selectedIndex   Int?       @map("selected_index")
+  /// 元投稿との類似度チェック結果 (F-05)
+  similarityJson  Json?      @map("similarity_json")
+  status          PostStatus @default(ai_generated)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduledPosts ScheduledPost[]
+
+  @@index([userId, status])
+  @@map("generated_posts")
+}
+
+enum ScheduleStatus {
+  scheduled
+  posting
+  published
+  failed
+}
+
+model ScheduledPost {
+  id              String         @id @default(cuid())
+  generatedPostId String         @map("generated_post_id")
+  xAccountId      String         @map("x_account_id")
+  text            String
+  scheduledAt     DateTime       @map("scheduled_at")
+  status          ScheduleStatus @default(scheduled)
+  retryCount      Int            @default(0) @map("retry_count")
+  error           String?
+  /// 投稿成功時に X から返る投稿ID
+  postedXPostId   String?        @map("posted_x_post_id")
+  postedAt        DateTime?      @map("posted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  generatedPost GeneratedPost @relation(fields: [generatedPostId], references: [id], onDelete: Cascade)
+  xAccount      XAccount      @relation(fields: [xAccountId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@map("scheduled_posts")
+}
+
+// ---------------------------------------------------------------------------
+// 自己投稿分析 (F-10)
+// ---------------------------------------------------------------------------
+
+model OwnPost {
+  id         String   @id @default(cuid())
+  xAccountId String   @map("x_account_id")
+  xPostId    String   @unique @map("x_post_id")
+  text       String
+  hasMedia   Boolean  @default(false) @map("has_media")
+  permalink  String?
+  postedAt   DateTime @map("posted_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  xAccount XAccount        @relation(fields: [xAccountId], references: [id], onDelete: Cascade)
+  metrics  OwnPostMetric[]
+
+  @@index([xAccountId, postedAt])
+  @@map("own_posts")
+}
+
+/// 自己投稿のメトリクススナップショット。
+/// 非公開指標 (URLクリック・プロフィールクリック) は X API 側に30日制限があるため、
+/// 投稿後 1h / 6h / 24h / 3d / 7d / 14d / 30d のタイミングで保存して自前で履歴化する (§12)。
+model OwnPostMetric {
+  id                String   @id @default(cuid())
+  ownPostId         String   @map("own_post_id")
+  /// スナップショットのラベル ("1h" / "6h" / "24h" / "3d" / "7d" / "14d" / "30d")
+  snapshotLabel     String   @map("snapshot_label")
+  impressions       Int      @default(0)
+  likes             Int      @default(0)
+  reposts           Int      @default(0)
+  quotes            Int      @default(0)
+  replies           Int      @default(0)
+  bookmarks         Int      @default(0)
+  /// 非公開指標。取得できない場合は null のままにし、UI では「取得不可」と表示する
+  urlClicks         Int?     @map("url_clicks")
+  profileClicks     Int?     @map("profile_clicks")
+  fetchedAt         DateTime @default(now()) @map("fetched_at")
+
+  ownPost OwnPost @relation(fields: [ownPostId], references: [id], onDelete: Cascade)
+
+  @@unique([ownPostId, snapshotLabel])
+  @@index([ownPostId])
+  @@map("own_post_metrics")
+}
+
+// ---------------------------------------------------------------------------
+// APIコスト管理 (F-25)
+// ---------------------------------------------------------------------------
+
+enum ApiType {
+  x
+  ai
+}
+
+/// 外部API呼び出しの記録。lib/usage/guard.ts が全呼び出しについて1行書き込む。
+model ApiUsage {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  apiType          ApiType  @map("api_type")
+  /// 呼び出したエンドポイント / 操作名 (例: "users.timeline", "ai.analyzePost")
+  endpoint         String
+  /// 読み取り件数・投稿件数など課金単位となる数量
+  units            Int      @default(1)
+  estimatedCostUsd Decimal  @default(0) @db.Decimal(12, 6) @map("estimated_cost_usd")
+  /// キャッシュから返したためAPIを呼ばなかった場合 true (コストは0)
+  cached           Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, apiType, createdAt])
+  @@map("api_usage")
+}
+
+/// BUDGET LIMIT: ユーザーごとの月額上限・警告ライン・機能別取得上限 (F-25)
+model BudgetSetting {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  monthlyLimitUsd   Decimal  @default(30) @db.Decimal(10, 2) @map("monthly_limit_usd")
+  /// 警告を出す割合 (0.8 = 上限の80%到達で警告)
+  warningRatio      Decimal  @default(0.8) @db.Decimal(3, 2) @map("warning_ratio")
+  /// 1回のリサーチで取得できる最大投稿数
+  maxPostsPerResearch Int    @default(200) @map("max_posts_per_research")
+  /// 上限到達時に取得系機能を停止するか
+  enforceHardStop   Boolean  @default(true) @map("enforce_hard_stop")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("budget_settings")
+}
