@@ -12,6 +12,7 @@ const NAV = [
   { href: "/benchmarks", label: "ベンチマーク" },
   { href: "/competitors", label: "競合発見" },
   { href: "/positioning", label: "ポジショニング" },
+  { href: "/strategy", label: "戦略" },
   { href: "/research", label: "リサーチ" },
   { href: "/trends", label: "トレンド" },
   { href: "/search", label: "検索" },
@@ -20,6 +21,7 @@ const NAV = [
   { href: "/schedule", label: "予約投稿" },
   { href: "/analytics", label: "自己分析" },
   { href: "/brand", label: "MY BRAND" },
+  { href: "/knowledge", label: "ナレッジ" },
   { href: "/settings", label: "設定" },
 ];
 

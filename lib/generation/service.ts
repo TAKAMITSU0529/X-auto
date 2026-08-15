@@ -10,6 +10,8 @@ import {
   applyPersonalCorrection,
   type PersonallyAdjustedScore,
 } from "@/lib/generation/personal-model";
+import { getStrategyForGeneration } from "@/lib/strategy/service";
+import { getKnowledgeForGeneration } from "@/lib/knowledge/service";
 
 /**
  * 投稿生成 (要件定義 F-05 モデリング再生成 / F-06 3案生成) の中核処理。
@@ -32,6 +34,8 @@ export type GenerationInput = {
   experience?: string;
   /** 投稿の目的 (認知/共感/教育/販売 等) */
   purpose?: string;
+  /** CUSTOMER JOURNEY のどの段階の人向けか (F-09。任意) */
+  journeyStage?: string;
 };
 
 export type DraftWithSimilarity = DraftResult & {
@@ -75,10 +79,18 @@ export async function generateThreeDrafts(
     throw new Error("勝ちパターンが見つかりません。");
   }
 
-  // MY BRAND 設定 (F-17)。生成は常にこれを参照する
-  const brand = await prisma.brandProfile.findUnique({
-    where: { userId: input.userId },
-  });
+  // MY BRAND 設定 (F-17)。生成は常にこれを参照する。
+  // マーケティング戦略 (F-09) と KNOWLEDGE BASE (F-17) も同時に参照し、
+  // 「誰に・何を・どんなふうに」がぶれず、本人の一次情報を優先した生成にする。
+  const [brand, strategy, knowledge] = await Promise.all([
+    prisma.brandProfile.findUnique({ where: { userId: input.userId } }),
+    getStrategyForGeneration(input.userId),
+    getKnowledgeForGeneration({
+      userId: input.userId,
+      genre: input.genre,
+      message: input.message,
+    }),
+  ]);
 
   // 分析済みなら構造情報も渡す (構造の転用の精度を上げる)。
   // 勝ちパターン指定時はそのステップを構造として渡す。
@@ -116,6 +128,9 @@ export async function generateThreeDrafts(
           prohibited: brand.prohibitedJson,
         }
       : undefined,
+    strategy,
+    knowledge: knowledge.length > 0 ? knowledge : undefined,
+    journeyStage: input.journeyStage,
   });
 
   // 類似度チェック (F-05)。元投稿がある場合のみ
@@ -152,6 +167,7 @@ export async function generateThreeDrafts(
         message: input.message,
         experience: input.experience ?? null,
         purpose: input.purpose ?? null,
+        journeyStage: input.journeyStage ?? null,
       } as Prisma.InputJsonValue,
       draftsJson: draftsWithSimilarity as unknown as Prisma.InputJsonValue,
       predictedScores: predictedScores

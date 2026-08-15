@@ -20,6 +20,7 @@ const generateSchema = z.object({
     .max(2000),
   experience: z.string().trim().max(2000).optional(),
   purpose: z.string().trim().max(60).optional(),
+  journeyStage: z.string().trim().max(20).optional(),
 });
 
 export async function generateAction(
@@ -35,6 +36,7 @@ export async function generateAction(
     message: formData.get("message"),
     experience: formData.get("experience") || undefined,
     purpose: formData.get("purpose") || undefined,
+    journeyStage: formData.get("journeyStage") || undefined,
   });
 
   if (!parsed.success) {
@@ -51,6 +53,7 @@ export async function generateAction(
       message: parsed.data.message,
       experience: parsed.data.experience,
       purpose: parsed.data.purpose,
+      journeyStage: parsed.data.journeyStage,
     });
     generatedPostId = result.generatedPostId;
   } catch (error) {

@@ -116,10 +116,12 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-24 | **検索/フィルタ**（取得済み投稿の横断検索：キーワード・アカウント・いいね数・保存済み。DB内検索でAPIコスト0） |
 | F-08 | **競合発見エンジン＋COMPETITOR SCORE**（キーワード検索で同ジャンル発信者を発見→AIが0〜100で採点・理由付き→ワンクリックでベンチマーク追加。Follow Graph探索はコスト過大のため非実装） |
 | F-12 | **ポジショニング分析＋プロフィール生成**（登録済み競合を2軸マップに配置、空きポジション仮説、POSITIONING SCORE、名前欄/bio/固定ポスト/ヘッダーコピーの3案生成。DB内の公開プロフィールのみ使用でAPIコスト0） |
+| F-09 | **マーケティング戦略AI**（WHO/WHAT/WHY/HOW 設定ウィザード・CUSTOMER INSIGHT（本音9項目の仮説化。必ず「マーケティング仮説」表示）・MARKETING PLAYBOOK（原則別アドバイス＋リスト動線＋CUSTOMER JOURNEY）。投稿生成が常に参照し、投稿ごとにJOURNEY段階を指定可能） |
+| F-17 | **KNOWLEDGE BASE**（考え方・経験・失敗談・事例・商品情報の蓄積。生成時は競合投稿より本人の一次情報を優先参照。関連度はバイグラム一致で自動選択） |
 
 ### 未実装（以降）
 
-- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-09 マーケティング戦略AI・F-13 動線分析・F-17 Knowledge Base・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
+- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-13 動線分析・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -163,6 +165,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase3a.ts` | Phase 3 スライスAの受け入れ確認（トレンド分析・検索） |
 | `npx tsx scripts/verify-phase3b.ts` | Phase 3 スライスBの受け入れ確認（競合発見・COMPETITOR SCORE） |
 | `npx tsx scripts/verify-phase3c.ts` | Phase 3 スライスCの受け入れ確認（ポジショニング・プロフィール3案） |
+| `npx tsx scripts/verify-phase3d.ts` | Phase 3 スライスDの受け入れ確認（マーケティング戦略AI・KNOWLEDGE BASE） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック

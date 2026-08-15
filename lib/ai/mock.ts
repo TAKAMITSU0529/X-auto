@@ -2,6 +2,9 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -337,6 +340,164 @@ export class MockAiProvider implements AiProvider {
           headerCopy: "失敗から始まった、定着する導入の話。",
         },
       ],
+    };
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    const who = (input.who ?? {}) as { industry?: string; problems?: string };
+    const target = who.industry || "ターゲット";
+
+    return {
+      surfaceProblem:
+        who.problems || `（モック）${target}は「AIを使いこなせていない」と感じている`,
+      realProblem:
+        "（モック）ツールの問題ではなく、業務のどこをやめて何を残すかを決められていないこと",
+      emotions: ["焦り", "取り残される不安", "半信半疑"],
+      fearedFuture:
+        "競合だけが効率化に成功し、自社は人手不足のまま値上げもできず消耗していく未来",
+      desiredFuture:
+        "少ない人数でも回る体制ができ、自分は本来やりたい仕事に時間を使えている未来",
+      whyNotAct:
+        "何から始めるのが正解か分からず、失敗して社内の信用を失うのが怖いから",
+      whyNotBuy:
+        "過去にツール導入で失敗した経験があり、また「導入して終わり」になると思っているから",
+      believedNorm: "AI活用は大企業やITに強い会社がやるものだという常識",
+      normToBreak:
+        "「まず全社導入」ではなく「1部署で小さく回して広げる」方が定着するという新常識",
+    };
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    void input;
+    return {
+      advices: [
+        {
+          area: "ターゲット市場",
+          advice:
+            "（モック）「AIに興味がある人全員」ではなく、過去にツール導入で失敗した経験を持つ層に絞ると刺さりやすい",
+          action: "bioと固定ポストを「導入失敗経験者向け」の言葉に書き換える",
+        },
+        {
+          area: "USP",
+          advice:
+            "（モック）ツール紹介ではなく「定着させる手順」を独自資産として前面に出す",
+          action: "定着手順を1枚にまとめた無料資料を作り、固定ポストから配布する",
+        },
+        {
+          area: "リスクリバーサル",
+          advice:
+            "（モック）「失敗したらどうしよう」という不安を先に除去する。無料診断・返金条件・小さく始めるプランが有効",
+          action: "無料相談の案内に「合わなければ導入を止める判断もお手伝いします」と明記する",
+        },
+        {
+          area: "LTV・継続",
+          advice:
+            "（モック）導入支援で終わらせず、定着レビューの月次契約への動線を設計する",
+          action: "支援終了1ヶ月後のフォロー面談をパッケージに含める",
+        },
+        {
+          area: "オファー・CTA",
+          advice:
+            "（モック）投稿ごとにCTAを分ける。教育投稿では資料DL、実績投稿では無料相談に誘導する",
+          action: "今週の投稿予定に対しCTAを1つずつ割り当てる",
+        },
+      ],
+      funnel: {
+        steps: [
+          { label: "X投稿", description: "実例と数字で認知を取る" },
+          { label: "プロフィール", description: "USPと無料資料への導線を明記" },
+          { label: "無料資料DL", description: "定着手順書でリスト化する" },
+          { label: "メール/LINE教育", description: "事例配信で信頼を積む" },
+          { label: "無料相談", description: "不安の除去と個別診断" },
+          { label: "導入支援契約", description: "本命商品への転換" },
+        ],
+        note: "（モック）リスト化を挟むことで、Xのアルゴリズム変動に依存しない資産動線になります",
+      },
+      journey: [
+        { stage: "認知", goal: "存在を知ってもらう", postHint: "実数公開・逆張り・失敗談のフックで新規リーチを取る" },
+        { stage: "興味", goal: "続きが気になる状態にする", postHint: "How-Toや事例の連載で繰り返し接触する" },
+        { stage: "信頼", goal: "この人は本物だと感じてもらう", postHint: "顧客事例・数字付き実績・失敗からの学びを出す" },
+        { stage: "比較", goal: "他の選択肢との違いを示す", postHint: "「ツール導入」と「定着支援」の違いを言語化する" },
+        { stage: "相談", goal: "無料相談へ一歩踏み出させる", postHint: "相談で得られるものと所要時間を具体的に示す" },
+        { stage: "購入", goal: "導入を決断してもらう", postHint: "募集投稿は頻度を絞り、締切と定員を明確にする" },
+      ],
+    };
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    const competitors = input.competitors.map((c) => {
+      // 公開情報 (bio・URL・投稿) の内容から決定的に分類する
+      const school = /講座|スクール|受講|セミナー/.test(c.bio);
+      const consult = /支援|コンサル|顧問|導入/.test(c.bio);
+      const community = /コミュニティ|サロン/.test(c.bio);
+      const monetizationType = school
+        ? "講座・スクール"
+        : consult
+          ? "コンサル・導入支援"
+          : community
+            ? "コミュニティ"
+            : "コンテンツ販売";
+
+      const confirmedFacts: string[] = [];
+      if (c.url) confirmedFacts.push(`プロフィールにURLを設置 (${c.url})`);
+      if (school) confirmedFacts.push("bio に講座・セミナーへの言及がある");
+      if (consult) confirmedFacts.push("bio に支援・コンサルティングの記載がある");
+      if (c.ctaPosts.length > 0)
+        confirmedFacts.push(`投稿内に誘導 (CTA) を含む投稿が ${c.ctaPosts.length} 件ある`);
+      if (confirmedFacts.length === 0)
+        confirmedFacts.push("公開プロフィールからは明確な商用導線を確認できない");
+
+      return {
+        handle: c.handle,
+        monetizationType,
+        confirmedFacts,
+        estimated: [
+          `（モック）${monetizationType}を本命商品として、無料コンテンツでリスト化してから案内する二段構えと推定`,
+          "募集は常時ではなく、教育投稿を挟んで期間限定で行うパターンと推定",
+        ],
+        funnelSteps: [
+          { label: "X投稿 (認知)", basis: "confirmed" as const },
+          { label: "プロフィール", basis: "confirmed" as const },
+          ...(c.url
+            ? [{ label: "外部リンク (リスト化)", basis: "confirmed" as const }]
+            : [{ label: "リスト化 (LINE/メルマガ)", basis: "estimated" as const }]),
+          { label: "教育コンテンツ", basis: "estimated" as const },
+          { label: monetizationType, basis: school || consult ? ("confirmed" as const) : ("estimated" as const) },
+        ],
+      };
+    });
+
+    return {
+      competitors,
+      adaptation: {
+        steps: [
+          "X投稿: 導入実例と数字で認知を取る",
+          "プロフィール: 無料の定着手順書へ誘導",
+          "資料DL: メールアドレスでリスト化",
+          "メール教育: 事例を週1配信",
+          "無料相談: 不安の除去",
+          "導入支援契約",
+        ],
+        reason:
+          "（モック）競合の多くは講座への直行動線ですが、あなたの強み（支援実績）は個別相談と相性が良いため、資料→相談を挟む動線が転用に適しています。",
+      },
     };
   }
 }

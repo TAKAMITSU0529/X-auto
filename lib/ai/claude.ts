@@ -4,6 +4,9 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -140,6 +143,9 @@ ${input.text}
       style?: unknown;
       prohibited?: unknown;
     };
+    strategy?: unknown;
+    knowledge?: { kind: string; title: string; content: string }[];
+    journeyStage?: string;
   }): Promise<DraftResult[]> {
     const client = createClient();
 
@@ -157,7 +163,29 @@ ${JSON.stringify(input.brand, null, 2)}
 `
       : "";
 
-    const prompt = `${sourceSection}${brandSection}
+    // マーケティング戦略 (F-09)。「誰に・何を・どんなふうに」をぶれさせない
+    const strategySection = input.strategy
+      ? `マーケティング戦略設定 (誰に・何を・なぜ自分か・どう伝えるか。この設定からぶれないこと):
+${JSON.stringify(input.strategy, null, 2)}
+`
+      : "";
+
+    // KNOWLEDGE BASE (F-17)。競合投稿より優先する一次情報
+    const knowledgeSection =
+      input.knowledge && input.knowledge.length > 0
+        ? `本人のKNOWLEDGE BASE (最優先の一次情報。参考投稿や一般論より、ここにある本人の経験・考え方・事例を優先して使うこと):
+${input.knowledge
+  .map((k) => `【${k.kind}】${k.title}\n${k.content}`)
+  .join("\n\n")}
+`
+        : "";
+
+    const journeySection = input.journeyStage
+      ? `この投稿のターゲット段階 (CUSTOMER JOURNEY): ${input.journeyStage} — この段階の読者に響く内容・CTAにすること
+`
+      : "";
+
+    const prompt = `${sourceSection}${brandSection}${strategySection}${knowledgeSection}${journeySection}
 ジャンル: ${input.genre}
 今回伝えたい内容: ${input.message}
 
@@ -424,5 +452,137 @@ profiles は3案。収益額など非公開情報は推測しないこと。`;
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
     return extractJson<PositioningResult>(raw);
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    const client = createClient();
+
+    const prompt = `以下はある発信者のマーケティング設定 (WHO/WHAT/WHY/HOW) です。
+このターゲットの CUSTOMER INSIGHT を仮説化してください。
+表面的なターゲット像ではなく「本人が言葉にしていない本音」まで踏み込むこと。
+ただしこれはマーケティング仮説であり、事実の断定ではないことを前提に書くこと。
+
+WHO (誰に): ${JSON.stringify(input.who)}
+WHAT (何を): ${JSON.stringify(input.what)}
+WHY (なぜ自分か): ${JSON.stringify(input.why)}
+HOW (どう伝えるか): ${JSON.stringify(input.how)}
+
+次のJSON形式で回答してください:
+{
+  "surfaceProblem": "表面的課題 (本人が自覚して口にしている課題)",
+  "realProblem": "本当の課題 (その裏にある構造的な課題)",
+  "emotions": ["いま抱えている感情 (2〜4個)"],
+  "fearedFuture": "恐れている未来",
+  "desiredFuture": "欲しい未来",
+  "whyNotAct": "行動しない理由",
+  "whyNotBuy": "購入しない理由",
+  "believedNorm": "信じている常識",
+  "normToBreak": "壊すべき常識"
+}
+
+健康・政治・宗教などのセンシティブ属性は推定しないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    return extractJson<CustomerInsightResult>(raw);
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    const client = createClient();
+
+    const prompt = `以下の発信者のために MARKETING PLAYBOOK を作成してください。
+ダイレクトレスポンス／顧客中心マーケティングの普遍的な原則
+(ターゲット市場の絞り込み・USP・顧客価値・卓越の戦略・リスクリバーサル・
+LTV/継続/クロスセル・紹介/JV・見込み客育成・オファー/CTA・テストと改善・既存資産活用)
+を、この発信者のX運用に合わせた具体的なアドバイスに落とし込むこと。
+書籍等の本文を転載せず、考え方だけを独自の言葉で適用すること。
+
+マーケティング設定: ${JSON.stringify(input.strategy)}
+${input.insight ? `CUSTOMER INSIGHT (仮説): ${JSON.stringify(input.insight)}` : ""}
+${input.brand ? `発信者情報: ${JSON.stringify(input.brand)}` : ""}
+
+次のJSON形式で回答してください:
+{
+  "advices": [
+    { "area": "原則名 (例: USP)", "advice": "この発信者に合わせた助言", "action": "今週できる具体的な行動" }
+  ],
+  "funnel": {
+    "steps": [{ "label": "X投稿", "description": "この段階でやること" }],
+    "note": "この動線設計の意図"
+  },
+  "journey": [
+    { "stage": "認知", "goal": "この段階のゴール", "postHint": "この段階向けの投稿の作り方" }
+  ]
+}
+
+advices は4〜6個。funnel.steps は X → リスト化 → 教育 → 商品 の流れで4〜6段。
+journey は 認知→興味→信頼→比較→相談→購入 の6段階すべて。
+全てマーケティング仮説であり、成果の保証をしないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
+    return extractJson<PlaybookResult>(raw);
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    const client = createClient();
+
+    const list = input.competitors
+      .map(
+        (c) =>
+          `@${c.handle} / ${c.name}
+bio: ${c.bio}
+プロフィールURL: ${c.url ?? "なし"}
+誘導を含む投稿の例:
+${c.ctaPosts.length > 0 ? c.ctaPosts.map((p) => `- ${p.slice(0, 200)}`).join("\n") : "- (DB内に該当なし)"}`,
+      )
+      .join("\n\n---\n\n");
+
+    const prompt = `以下の競合アカウントの公開情報から、それぞれのマネタイズ動線を分析してください。
+
+重要な制約:
+- 「確認済み」(confirmedFacts / basis:"confirmed") には、与えられた bio・URL・投稿から実際に確認できることだけを入れること
+- それ以外の推測は必ず「推定」(estimated / basis:"estimated") に分類すること
+- 収益額・成約率・顧客数などの非公開情報は推測しないこと
+
+${list}
+
+次のJSON形式で回答してください:
+{
+  "competitors": [
+    {
+      "handle": "ハンドル名 (@なし)",
+      "monetizationType": "収益タイプ (コンテンツ販売/コンサル・スクール/店舗集客/SaaS/講座/セミナー/コミュニティ/広告・アフィリエイト/採用 など)",
+      "confirmedFacts": ["公開情報から確認できた事実"],
+      "estimated": ["AIによる推定"],
+      "funnelSteps": [{ "label": "X投稿 (認知)", "basis": "confirmed" }]
+    }
+  ],
+  "adaptation": {
+    "steps": ["自分が転用する場合の動線ステップ"],
+    "reason": "なぜこの動線が転用に適するか"
+  }
+}
+
+funnelSteps は 認知→プロフィール→リスト化→教育→商品 のような4〜6段の導線。
+competitors は全員分。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
+    return extractJson<FunnelAnalysisResult>(raw);
   }
 }

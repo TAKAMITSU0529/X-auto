@@ -40,6 +40,9 @@ export type AiCostKey =
   | "ai.analyzeTrends"
   | "ai.scoreCompetitors"
   | "ai.positioning"
+  | "ai.customerInsight"
+  | "ai.playbook"
+  | "ai.funnels"
   | "ai.summarize";
 
 /**
@@ -54,6 +57,9 @@ export const AI_UNIT_COST_USD: Record<AiCostKey, number> = {
   "ai.analyzeTrends": 0.04,
   "ai.scoreCompetitors": 0.03,
   "ai.positioning": 0.05,
+  "ai.customerInsight": 0.03,
+  "ai.playbook": 0.05,
+  "ai.funnels": 0.05,
   "ai.summarize": 0.02,
 };
 

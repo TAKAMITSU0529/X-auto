@@ -39,6 +39,9 @@ model User {
   apiUsages       ApiUsage[]
   budgetSetting   BudgetSetting?
   weeklyReports   WeeklyReport[]
+  marketingStrategy MarketingStrategy?
+  knowledgeItems  KnowledgeItem[]
+  pillarSetting   ContentPillarSetting?
 
   @@map("users")
 }
@@ -297,6 +300,72 @@ model BrandProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("brand_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// マーケティング戦略 (F-09) / KNOWLEDGE BASE (F-17) / CONTENT PILLARS (F-18)
+// ---------------------------------------------------------------------------
+
+/// マーケティング戦略AI (F-09) の設定と生成結果。
+/// who/what/why/how はユーザー入力 (事実)、insight/playbook は AI生成
+/// (マーケティング仮説) なので、表示側で §9 に従い必ず区別する。
+model MarketingStrategy {
+  id           String   @id @default(cuid())
+  userId       String   @unique @map("user_id")
+  /// WHO: TARGET DESIGN (業種・年齢層・課題・欲求・悩み・購買障壁など)
+  whoJson      Json?    @map("who_json")
+  /// WHAT: 提供価値・商品・USP
+  whatJson     Json?    @map("what_json")
+  /// WHY: 実績・専門性・独自性 (なぜ自分なのか)
+  whyJson      Json?    @map("why_json")
+  /// HOW: 発信トーン・コンテンツの柱・動線設計
+  howJson      Json?    @map("how_json")
+  /// CUSTOMER INSIGHT (AI生成のマーケティング仮説)
+  insightJson  Json?    @map("insight_json")
+  /// MARKETING PLAYBOOK (AI生成のアドバイス・リスト動線・CUSTOMER JOURNEY)
+  playbookJson Json?    @map("playbook_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("marketing_strategies")
+}
+
+/// KNOWLEDGE BASE (F-17): 本人固有の一次情報。
+/// 投稿生成 (F-05/F-06) は競合投稿よりもこちらを優先して参照する。
+model KnowledgeItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  /// 種類 (考え方/経験/失敗談/成功事例/顧客事例/商品情報/会社情報/メモ)
+  kind      String
+  title     String
+  content   String
+  tags      String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("knowledge_items")
+}
+
+/// CONTENT PILLARS (F-18): 発信テーマの柱と目標比率の設計。
+/// 実際の投稿比率とのズレはルールベース分類 (DATA) で毎回計算する。
+model ContentPillarSetting {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  /// 柱の配列: { name, ratio(%), keywords[] }
+  pillarsJson      Json     @map("pillars_json")
+  /// 目的別比率: { reach, authority, trust, education, conversion } (%)
+  purposeRatioJson Json?    @map("purpose_ratio_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("content_pillar_settings")
 }
 
 // ---------------------------------------------------------------------------

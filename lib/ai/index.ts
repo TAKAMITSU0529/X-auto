@@ -7,6 +7,9 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -61,6 +64,9 @@ export class AiService {
       style?: unknown;
       prohibited?: unknown;
     };
+    strategy?: unknown;
+    knowledge?: { kind: string; title: string; content: string }[];
+    journeyStage?: string;
   }): Promise<DraftResult[]> {
     return withApiGuard({
       userId: this.userId,
@@ -152,6 +158,59 @@ export class AiService {
       units: 1,
       run: async () => ({
         result: await this.provider.analyzePositioning(input),
+      }),
+    });
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.customerInsight",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generateCustomerInsight(input),
+      }),
+    });
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.playbook",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generatePlaybook(input),
+      }),
+    });
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.funnels",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.analyzeFunnels(input),
       }),
     });
   }
