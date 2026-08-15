@@ -2,6 +2,7 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  PositioningResult,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -261,5 +262,81 @@ export class MockAiProvider implements AiProvider {
         reasons,
       };
     });
+  }
+
+  async analyzePositioning(input: {
+    genre: string;
+    brand?: unknown;
+    competitors: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<PositioningResult> {
+    // bioの内容から決定的にそれらしく配置する
+    const placements = input.competitors.slice(0, 8).map((c, i) => {
+      const news = /ニュース|速報|最新/.test(c.bio);
+      const practice = /導入|支援|事例|現場/.test(c.bio);
+      const beginner = /初心者|始め方|入門|学習/.test(c.bio);
+      return {
+        handle: c.handle,
+        x: beginner ? -0.6 + i * 0.05 : 0.3 + (i % 3) * 0.2,
+        y: practice ? 0.5 + (i % 2) * 0.2 : news ? -0.7 + (i % 3) * 0.1 : 0,
+      };
+    });
+
+    return {
+      axes: {
+        x: { label: "対象読者", low: "初心者向け", high: "実務者・経営者向け" },
+        y: { label: "発信内容", low: "情報・ニュース", high: "実務・導入事例" },
+      },
+      placements,
+      recommendedPosition: {
+        x: 0.7,
+        y: 0.8,
+        label: "経営者向け × 実例",
+      },
+      candidates: [
+        {
+          name: `中小企業の経営者向け × ${input.genre}の実例発信`,
+          score: 88,
+          reasons: [
+            "ニュース系発信者は多いが実例を数字付きで出す発信者が少ない (競合密度: 低)",
+            "意思決定者向けはマネタイズ可能性が高い",
+            "本人の支援実績と直結し継続発信できる",
+          ],
+        },
+        {
+          name: `${input.genre}ツールのレビュー・比較`,
+          score: 52,
+          reasons: ["発信者が多く差別化が難しい (競合密度: 高)"],
+        },
+        {
+          name: `初心者向け${input.genre}講座`,
+          score: 64,
+          reasons: ["需要は大きいがスクール系の強豪が多い"],
+        },
+      ],
+      recommendation: `（モック）「${input.genre}」ではニュース・ツール紹介の発信者が多い一方、経営者向けに導入の実数（コスト・削減時間・失敗）を発信するポジションは比較的空いています。実務支援の実績を持つ発信者に最適な立ち位置です。`,
+      profiles: [
+        {
+          title: "A案：実績前面型",
+          name: `山田太郎｜${input.genre}導入支援`,
+          bio: `中小企業30社に${input.genre}を導入支援｜平均で月20時間の業務削減｜現場で見た成功と失敗をそのまま発信｜導入相談はプロフィールのリンクから`,
+          pinnedPost: `${input.genre}の導入支援で30社を見てきて、成果が出る会社と出ない会社の違いはたった1つでした。\n\nツール選定ではなく「やめる業務」を先に決めているかどうか。\n\nこのアカウントでは現場の実例だけを発信します。`,
+          headerCopy: `${input.genre}を「導入した」で終わらせない。現場に定着させる。`,
+        },
+        {
+          title: "B案：ターゲット特化型",
+          name: `山田太郎｜経営者のための${input.genre}`,
+          bio: `経営者向けに${input.genre}活用を発信｜難しい話はしません｜自社導入で人件費30%削減した方法を公開中｜無料相談は固定ポストから`,
+          pinnedPost: `「${input.genre}って結局うちの会社で使えるの？」\n\n経営者からこの質問を100回以上受けました。答えと判断基準をこの固定ポストにまとめます。`,
+          headerCopy: "経営判断に必要なAIの知識だけを、実例で。",
+        },
+        {
+          title: "C案：ストーリー型",
+          name: `山田太郎｜${input.genre}で会社を変える`,
+          bio: `最初の導入は失敗しました｜そこから学んで30社を支援｜失敗談と成功事例をセットで発信する${input.genre}コンサル｜詳しくは固定ポストへ`,
+          pinnedPost: `正直に言うと、最初の${input.genre}導入は大失敗でした。\n\n全部署一斉導入で、誰も使わなくなった。\n\nその失敗から学んだ「定着する導入」の全手順を発信していきます。`,
+          headerCopy: "失敗から始まった、定着する導入の話。",
+        },
+      ],
+    };
   }
 }

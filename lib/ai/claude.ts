@@ -4,6 +4,7 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  PositioningResult,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -375,5 +376,53 @@ scores は候補全員分、score は 0〜100。`;
       throw new Error("AIから有効な競合スコアが返りませんでした。");
     }
     return parsed.scores;
+  }
+
+  async analyzePositioning(input: {
+    genre: string;
+    brand?: unknown;
+    competitors: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<PositioningResult> {
+    const client = createClient();
+
+    const list = input.competitors
+      .map((c) => `@${c.handle} / ${c.name} / フォロワー${c.followers}\nbio: ${c.bio}`)
+      .join("\n\n");
+
+    const prompt = `ジャンル「${input.genre}」の市場ポジショニングを分析してください。
+${input.brand ? `発信者本人の情報 (この人の強み・実績に合う立ち位置を選ぶこと):\n${JSON.stringify(input.brand)}\n` : ""}
+競合アカウント (公開プロフィール):
+${list}
+
+1. 市場を分ける最適な2軸を提案し、各競合を -1〜1 の座標に配置する
+2. 空いていて本人に合うポジションを推奨する
+3. ポジショニング候補を3つ採点する (観点: 競合密度・市場需要・差別化・本人実績・本人専門性・マネタイズ可能性・継続発信可能性)
+4. 推奨ポジションに基づくプロフィールを3案生成する
+
+次のJSON形式で回答してください:
+{
+  "axes": {
+    "x": { "label": "軸名", "low": "左端の意味", "high": "右端の意味" },
+    "y": { "label": "軸名", "low": "下端の意味", "high": "上端の意味" }
+  },
+  "placements": [{ "handle": "ハンドル名", "x": 0.5, "y": -0.3 }],
+  "recommendedPosition": { "x": 0.7, "y": 0.8, "label": "推奨ポジションの短い名前" },
+  "candidates": [{ "name": "候補名", "score": 88, "reasons": ["採点理由"] }],
+  "recommendation": "空きポジションの仮説 (推定であることを前提に)",
+  "profiles": [
+    {
+      "title": "A案：◯◯型",
+      "name": "名前欄 (肩書き付き)",
+      "bio": "プロフィール文 (160字以内)",
+      "pinnedPost": "固定ポスト案",
+      "headerCopy": "ヘッダーに入れる訴求コピー"
+    }
+  ]
+}
+
+profiles は3案。収益額など非公開情報は推測しないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
+    return extractJson<PositioningResult>(raw);
   }
 }

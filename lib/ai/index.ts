@@ -7,6 +7,7 @@ import type {
   AiProvider,
   BatchAnalysisResult,
   CompetitorScore,
+  PositioningResult,
   DraftResult,
   DraftScore,
   PostAnalysisResult,
@@ -135,6 +136,22 @@ export class AiService {
       units: 1,
       run: async () => ({
         result: await this.provider.scoreCompetitors(input),
+      }),
+    });
+  }
+
+  async analyzePositioning(input: {
+    genre: string;
+    brand?: unknown;
+    competitors: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<PositioningResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.positioning",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.analyzePositioning(input),
       }),
     });
   }

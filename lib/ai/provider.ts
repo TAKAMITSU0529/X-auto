@@ -130,6 +130,31 @@ export type CompetitorScore = {
   reasons: string[];
 };
 
+/** ポジショニング分析の結果 (F-12)。全て AI推定 (マーケティング仮説) */
+export type PositioningResult = {
+  /** マップの2軸 (AIが最適な軸を提案する) */
+  axes: {
+    x: { label: string; low: string; high: string };
+    y: { label: string; low: string; high: string };
+  };
+  /** 競合の配置 (-1〜1 の座標) */
+  placements: { handle: string; x: number; y: number }[];
+  /** あなたが取るべき推奨ポジション */
+  recommendedPosition: { x: number; y: number; label: string };
+  /** ポジショニング候補と採点 (§28: 競合密度/需要/差別化/実績/専門性/マネタイズ/継続性) */
+  candidates: { name: string; score: number; reasons: string[] }[];
+  /** 空きポジションの仮説 */
+  recommendation: string;
+  /** プロフィール3案 (§29) */
+  profiles: {
+    title: string;
+    name: string;
+    bio: string;
+    pinnedPost: string;
+    headerCopy: string;
+  }[];
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -179,4 +204,11 @@ export interface AiProvider {
     genre: string;
     candidates: { handle: string; name: string; bio: string; followers: number }[];
   }): Promise<CompetitorScore[]>;
+
+  /** ポジショニング分析とプロフィール生成 (F-12) */
+  analyzePositioning(input: {
+    genre: string;
+    brand?: unknown;
+    competitors: { handle: string; name: string; bio: string; followers: number }[];
+  }): Promise<PositioningResult>;
 }
