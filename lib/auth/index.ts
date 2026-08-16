@@ -22,6 +22,9 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  // ホスティング先 (Vercel 等) の Host ヘッダを信頼してコールバックURLを組み立てる。
+  // 自動判定に任せるとプラットフォームによっては本番でURL不一致になるため明示する。
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
