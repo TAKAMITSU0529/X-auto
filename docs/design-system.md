@@ -53,18 +53,34 @@
 |---|---|
 | `PageHeader` | ページ見出し。`eyebrow` に機能群名、`action` に右上ボタン |
 | `Card` / `CardHeader` | カードとその見出し。`interactive` でホバー時に浮く |
-| `EmptyState` | 空状態。必ず「次に何をすればよいか」を書く |
+| `SectionHeading` | カード内の小見出し |
+| `EmptyState` | 空状態。必ず「次に何をすればよいか」を書く。カード内は `size="sm"` |
 | `StatTile` | 数値タイル。`accent` は1画面につき最大1つ |
-| `DataNote` / `HypothesisNote` / `ActionNote` | §9 の3区分 |
-| `Tag` | 小さい区分ラベル (`data` / `hypothesis` / `action` / `brand` / `neutral`) |
-| `LinkButton` | リンク型ボタン (`primary` / `secondary` / `ghost` × `sm` / `md` / `lg`) |
-| `NextActionButton` | 「次にやること」への導線。矢印付き |
+| `DataNote` / `HypothesisNote` / `ActionNote` | §9 の3区分。`items` に配列を渡すと箇条書きになる |
+| `Tag` | §9 の区分ラベル (`data` / `hypothesis` / `action` / `brand` / `neutral`) |
+| `StatusBadge` | 状態バッジ (`ok` / `warn` / `danger` / `info` / `neutral`)。**§9 とは別物なので `Tag` と混ぜない** |
+| `ScoreBadge` | 0〜100 のスコア (COMPETITOR / POSITIONING SCORE) |
 | `OutlierBadge` | 外れ値スコア (F-14) |
-| `MeterBar` | 比率バー。設計値と実測値の比較など |
+| `Button` | 通常のボタン。クライアント状態で `loading` を制御する場合に使う |
+| `LinkButton` | リンク型ボタン。`external` / `download` で素の `<a>` になる |
+| `buttonClassName()` | ボタンの見た目だけが欲しいとき |
+| `NextActionButton` | 「次にやること」への導線。矢印付き |
+| `FilterChip` | 絞り込み・並び替えのチップ (リンク型) |
+| `MeterBar` | 比率バー。`targetRatio` で目標の目盛りを重ねられる |
+| `Spinner` | 処理中表示 |
 
-フォームは `components/form.tsx` の `Field` / `TextArea` / `SubmitButton` /
-`FormError` / `FormSuccess` / `Spinner` / `selectClassName` を使う。
-`<select>` を直接書くときは `className={selectClassName}` を付ける。
+フォームは `components/form.tsx` の `Field` / `TextArea` / `CheckboxField` /
+`SubmitButton` / `FormError` / `FormSuccess` / `controlClassName` を使う。
+`<select>` や `min`/`max` 付きの `<input>` を直接書くときは
+`className={controlClassName}` を付ける。
+
+### 使い分けの注意
+
+- **`Tag` と `StatusBadge` を混同しない。** `Tag` は要件定義 §9 の
+  DATA / AI推定 / ACTION 専用。「連携済み」「期限切れ」のような状態は
+  `StatusBadge`
+- **`Button` と `SubmitButton`。** フォーム送信は `SubmitButton`
+  (`useFormStatus` が pending を自動で拾う)。それ以外は `Button`
 
 ## 6. レイアウト
 

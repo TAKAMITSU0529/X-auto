@@ -27,7 +27,7 @@ export function CreateListForm() {
 
       <FormError message={state.error} />
       <FormSuccess message={state.success} />
-      <SubmitButton>リストを作成</SubmitButton>
+      <SubmitButton pendingLabel="作成中...">リストを作成</SubmitButton>
     </form>
   );
 }

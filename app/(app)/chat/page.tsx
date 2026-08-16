@@ -10,6 +10,7 @@ export default function ChatPage() {
   return (
     <>
       <PageHeader
+        eyebrow="AI アシスタント"
         title="AI CHAT"
         description="X AUTO に蓄積されたあなたのデータをすべて文脈に持つ相談相手です。「最近何が伸びてる？」「何を発信すべき？」などを聞けます。"
       />

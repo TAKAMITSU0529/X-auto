@@ -9,6 +9,7 @@ export default function TrendsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="調べる"
         title="トレンド分析"
         description="ジャンルを指定すると、直近の高反応投稿から「いま何が伸びているか」「どこが空いているか」をAIが分類します。"
       />

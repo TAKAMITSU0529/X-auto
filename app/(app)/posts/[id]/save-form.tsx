@@ -2,7 +2,12 @@
 
 import { useActionState } from "react";
 import { saveToLibraryAction, type PostActionState } from "./actions";
-import { FormError, FormSuccess, SubmitButton } from "@/components/form";
+import {
+  FormError,
+  FormSuccess,
+  SubmitButton,
+  TextArea,
+} from "@/components/form";
 
 const initialState: PostActionState = { error: null, success: null };
 
@@ -29,14 +34,14 @@ export function SaveToLibraryForm({ postId }: { postId: string }) {
       <input type="hidden" name="postId" value={postId} />
 
       <div>
-        <p className="mb-1.5 text-xs font-medium text-ink-700">
+        <p className="mb-1.5 text-[13px] font-medium text-ink-700">
           分類タグ（1つ以上）
         </p>
         <div className="flex flex-wrap gap-1.5">
           {CATEGORY_TAGS.map((tag) => (
             <label
               key={tag}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-ink-200 px-2.5 py-1 text-xs text-ink-700 transition has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:text-brand-700"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-ink-200 bg-white px-2.5 py-1 text-xs font-medium text-ink-700 shadow-xs transition duration-200 hover:border-ink-300 hover:bg-ink-50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:text-brand-700"
             >
               <input
                 type="checkbox"
@@ -50,21 +55,18 @@ export function SaveToLibraryForm({ postId }: { postId: string }) {
         </div>
       </div>
 
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-medium text-ink-700">
-          メモ（任意）
-        </span>
-        <textarea
-          name="memo"
-          rows={2}
-          placeholder="どこを参考にしたいか"
-          className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        />
-      </label>
+      <TextArea
+        label="メモ（任意）"
+        name="memo"
+        rows={2}
+        placeholder="どこを参考にしたいか"
+      />
 
       <FormError message={state.error} />
       <FormSuccess message={state.success} />
-      <SubmitButton variant="secondary">ライブラリに保存</SubmitButton>
+      <SubmitButton variant="secondary" pendingLabel="保存中...">
+        ライブラリに保存
+      </SubmitButton>
     </form>
   );
 }

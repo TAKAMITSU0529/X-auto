@@ -9,6 +9,7 @@ export default function CompetitorsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="戦略を決める"
         title="競合発見"
         description="ジャンルのキーワードから同ジャンルの発信者を発見し、ベンチマークとしての適性をAIが採点します。良い候補はワンクリックでベンチマークに追加できます。"
       />

@@ -8,8 +8,12 @@ import { InsightsSection } from "./insights-section";
 import { WeeklyReportSection } from "./weekly-report-section";
 import {
   Card,
+  CardHeader,
   DataNote,
   EmptyState,
+  LinkButton,
+  MeterBar,
+  NextActionButton,
   PageHeader,
   StatTile,
   formatDateTime,
@@ -42,6 +46,7 @@ export default async function AnalyticsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="伸ばす"
         title="自己投稿分析"
         description="X AUTO から投稿した自分の投稿の実績です。ここに蓄積されたデータが Personal Growth Model（Phase 2）の学習元になります。"
         action={<SnapshotNowButton />}
@@ -51,14 +56,7 @@ export default async function AnalyticsPage() {
         <EmptyState
           title="まだ投稿実績がありません"
           description="予約投稿から X へ投稿すると、投稿後 1時間/6時間/24時間/3日/7日/14日/30日 のタイミングでメトリクスが自動記録されます。"
-          action={
-            <Link
-              href="/schedule"
-              className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-            >
-              予約投稿へ
-            </Link>
-          }
+          action={<LinkButton href="/schedule">予約投稿へ</LinkButton>}
         />
       ) : (
         <div className="space-y-6">
@@ -81,6 +79,7 @@ export default async function AnalyticsPage() {
                   : "—"
               }
               sub="総エンゲージメント ÷ 総インプレッション"
+              accent
             />
             <StatTile
               label="プロフィール / URLクリック"
@@ -96,10 +95,14 @@ export default async function AnalyticsPage() {
           </DataNote>
 
           <Card>
+            <CardHeader
+              title="投稿別の実測値"
+              description="最新スナップショット時点の指標です。ER = エンゲージメント率。"
+            />
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
+              <table className="w-full min-w-[760px] text-[13px]">
                 <thead>
-                  <tr className="border-b border-ink-200 text-left text-xs text-ink-500">
+                  <tr className="border-b border-ink-200 text-left text-[11px] font-medium text-ink-500">
                     <th className="pb-2 pr-3 font-medium">投稿</th>
                     <th className="pb-2 pr-3 text-right font-medium">インプ</th>
                     <th className="pb-2 pr-3 text-right font-medium">いいね</th>
@@ -114,12 +117,15 @@ export default async function AnalyticsPage() {
                 </thead>
                 <tbody className="divide-y divide-ink-100">
                   {posts.map((post) => (
-                    <tr key={post.id}>
+                    <tr
+                      key={post.id}
+                      className="transition duration-200 hover:bg-ink-25"
+                    >
                       <td className="max-w-[280px] py-2.5 pr-3">
-                        <p className="line-clamp-2 whitespace-pre-wrap text-ink-800">
+                        <p className="line-clamp-2 whitespace-pre-wrap leading-relaxed text-ink-800">
                           {post.text}
                         </p>
-                        <p className="mt-0.5 text-xs text-ink-400">
+                        <p className="mt-0.5 text-xs tabular-nums text-ink-400">
                           @{post.handle} · {formatDateTime(post.postedAt)}
                         </p>
                       </td>
@@ -130,12 +136,12 @@ export default async function AnalyticsPage() {
                       <Num value={post.latest?.bookmarks} />
                       <Num value={post.latest?.profileClicks} />
                       <Num value={post.latest?.urlClicks} />
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-ink-800">
+                      <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-ink-900">
                         {post.latest && post.latest.impressions > 0
                           ? formatPercent(post.engagementRate)
                           : "—"}
                       </td>
-                      <td className="py-2.5 text-right text-xs text-ink-400">
+                      <td className="py-2.5 text-right text-xs tabular-nums text-ink-400">
                         {post.snapshotCount}/7
                       </td>
                     </tr>
@@ -143,55 +149,81 @@ export default async function AnalyticsPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-ink-400">
+            <p className="mt-3 border-t border-ink-100 pt-3 text-xs leading-relaxed text-ink-400">
               「記録」は 1h/6h/24h/3d/7d/14d/30d の7チェックポイントのうち取得済みの数。
               スナップショットは worker（`npm run worker`）が5分ごとに確認します。
             </p>
           </Card>
 
           <Card>
-            <h2 className="text-sm font-semibold text-ink-900">
-              CONTENT ANALYSIS — テーマ別の平均エンゲージメント率
-            </h2>
+            <CardHeader
+              title="CONTENT ANALYSIS — テーマ別の平均エンゲージメント率"
+              description="CONTENT PILLARS の柱ごとに、実測ERを比較します。"
+              action={
+                themes.hasPillars && themes.stats.length > 0 ? (
+                  <NextActionButton
+                    href={`/generate?genre=${encodeURIComponent(themes.stats[0].theme)}`}
+                  >
+                    「{themes.stats[0].theme}」で3案生成
+                  </NextActionButton>
+                ) : undefined
+              }
+            />
             {!themes.hasPillars ? (
-              <p className="mt-3 text-sm text-ink-500">
+              <p className="text-[13px] leading-relaxed text-ink-500">
                 テーマ別分析には CONTENT PILLARS の設定が必要です。{" "}
-                <Link href="/pillars" className="font-medium text-brand-700 underline">
+                <Link
+                  href="/pillars"
+                  className="font-semibold text-brand-700 underline underline-offset-2 transition duration-200 hover:text-brand-800"
+                >
                   ピラーを設定する →
                 </Link>
               </p>
             ) : themes.stats.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-500">
+              <p className="text-[13px] leading-relaxed text-ink-500">
                 メトリクス取得済みの投稿がまだありません。
               </p>
             ) : (
-              <div className="mt-3 space-y-3">
-                <div className="space-y-2">
-                  {themes.stats.map((stat) => {
+              <div className="space-y-3">
+                <ul className="space-y-2.5">
+                  {themes.stats.map((stat, index) => {
                     const maxEr = themes.stats[0].avgEngagementRate || 1;
                     return (
-                      <div key={stat.theme} className="flex items-center gap-3 text-sm">
-                        <span className="w-40 shrink-0 truncate text-ink-800">
+                      <li
+                        key={stat.theme}
+                        className="flex items-center gap-3 text-[13px]"
+                      >
+                        <span
+                          className={`w-40 shrink-0 truncate ${
+                            index === 0
+                              ? "font-semibold text-ink-900"
+                              : "text-ink-700"
+                          }`}
+                          title={stat.theme}
+                        >
                           {stat.theme}
                         </span>
-                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                          <div
-                            className="h-full rounded-full bg-brand-500"
-                            style={{
-                              width: `${Math.max(4, Math.round((stat.avgEngagementRate / maxEr) * 100))}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="w-16 shrink-0 text-right text-xs tabular-nums text-ink-700">
+                        <MeterBar
+                          ratio={stat.avgEngagementRate / maxEr}
+                          tone={index === 0 ? "brand" : "ink"}
+                          className="flex-1"
+                        />
+                        <span
+                          className={`w-16 shrink-0 text-right text-xs tabular-nums ${
+                            index === 0
+                              ? "font-bold text-brand-700"
+                              : "text-ink-700"
+                          }`}
+                        >
                           {formatPercent(stat.avgEngagementRate)}
                         </span>
                         <span className="w-12 shrink-0 text-right text-xs tabular-nums text-ink-400">
                           {stat.count}件
                         </span>
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
                 <DataNote>
                   テーマは CONTENT PILLARS（F-18）の柱とキーワードによるルールベース分類です（実測の集計 = DATA）。件数が少ないテーマの数値は参考程度に見てください。
                 </DataNote>

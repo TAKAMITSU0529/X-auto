@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { runDueNowAction, type RunNowState } from "./actions";
+import { Spinner } from "@/components/form";
 
 const initialState: RunNowState = { error: null, success: null };
 
@@ -16,10 +17,14 @@ export function RunNowButton() {
         <RunNowSubmit />
       </form>
       {state.success ? (
-        <p className="mt-1 text-xs text-emerald-700">{state.success}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-emerald-700">
+          {state.success}
+        </p>
       ) : null}
       {state.error ? (
-        <p className="mt-1 text-xs text-red-600">{state.error}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-rose-600">
+          {state.error}
+        </p>
       ) : null}
     </div>
   );
@@ -31,9 +36,16 @@ function RunNowSubmit() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:bg-ink-50 disabled:opacity-60"
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-xs transition duration-200 hover:border-ink-300 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {pending ? "処理中..." : "期限が来た予約を今すぐ処理"}
+      {pending ? (
+        <>
+          <Spinner />
+          処理中...
+        </>
+      ) : (
+        "期限が来た予約を今すぐ処理"
+      )}
     </button>
   );
 }

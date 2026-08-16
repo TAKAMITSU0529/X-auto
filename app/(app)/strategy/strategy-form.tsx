@@ -9,6 +9,7 @@ import {
   SubmitButton,
   TextArea,
 } from "@/components/form";
+import { Tag } from "@/components/ui";
 
 const initialState: StrategyFormState = { error: null, success: null };
 
@@ -27,14 +28,14 @@ function Section({
 }) {
   return (
     <section className="space-y-4">
-      <div className="border-b border-ink-100 pb-2">
-        <h2 className="text-sm font-semibold text-ink-900">
-          <span className="mr-2 rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-bold text-brand-700">
-            {step}
-          </span>
+      <div className="border-b border-ink-100 pb-2.5">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold text-ink-900">
+          <Tag tone="brand">{step}</Tag>
           {title}
         </h2>
-        <p className="mt-1 text-xs text-ink-500">{description}</p>
+        <p className="mt-1 text-xs leading-relaxed text-ink-500">
+          {description}
+        </p>
       </div>
       {children}
     </section>

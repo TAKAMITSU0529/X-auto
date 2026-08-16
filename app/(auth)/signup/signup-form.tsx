@@ -10,7 +10,7 @@ export function SignupForm() {
   const [state, formAction] = useActionState(signupAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-4">
       <Field label="名前" name="name" autoComplete="name" required />
       <Field
         label="メールアドレス"
@@ -36,7 +36,10 @@ export function SignupForm() {
       />
 
       <FormError message={state.error} />
-      <SubmitButton>登録してはじめる</SubmitButton>
+
+      <div className="pt-1">
+        <SubmitButton pendingLabel="登録中...">登録してはじめる</SubmitButton>
+      </div>
     </form>
   );
 }

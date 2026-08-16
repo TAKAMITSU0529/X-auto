@@ -2,7 +2,12 @@
 
 import { useActionState } from "react";
 import { savePillarsAction, type PillarsFormState } from "./actions";
-import { FormError, FormSuccess, SubmitButton } from "@/components/form";
+import {
+  FormError,
+  FormSuccess,
+  SubmitButton,
+  selectClassName,
+} from "@/components/form";
 
 const initialState: PillarsFormState = { error: null, success: null };
 
@@ -27,22 +32,19 @@ export function PillarsForm({
 }) {
   const [state, formAction] = useActionState(savePillarsAction, initialState);
 
-  const inputClass =
-    "w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
-
   return (
     <form action={formAction} className="space-y-8">
       <section className="space-y-3">
-        <div className="border-b border-ink-100 pb-2">
-          <h2 className="text-sm font-semibold text-ink-900">
+        <div className="border-b border-ink-100 pb-2.5">
+          <h2 className="text-[13px] font-semibold text-ink-900">
             発信テーマの柱（最大6つ）
           </h2>
-          <p className="mt-1 text-xs text-ink-500">
+          <p className="mt-1 text-xs leading-relaxed text-ink-500">
             名前が空の行は無視されます。キーワードは実際の投稿を柱に分類するために使います（部分一致）。
           </p>
         </div>
 
-        <div className="hidden gap-2 text-xs font-medium text-ink-500 sm:grid sm:grid-cols-[minmax(0,3fr)_70px_minmax(0,4fr)]">
+        <div className="hidden gap-2 text-[11px] font-medium text-ink-500 sm:grid sm:grid-cols-[minmax(0,3fr)_70px_minmax(0,4fr)]">
           <span>柱の名前</span>
           <span>比率 %</span>
           <span>分類キーワード（カンマ区切り）</span>
@@ -57,7 +59,7 @@ export function PillarsForm({
               name={`pillar-${i}-name`}
               defaultValue={row.name}
               placeholder={`例：${["AI導入事例", "業務改善ノウハウ", "経営の考え方", "ツール活用", "実績・数字", "人間性・価値観"][i]}`}
-              className={inputClass}
+              className={selectClassName}
             />
             <input
               name={`pillar-${i}-ratio`}
@@ -66,24 +68,24 @@ export function PillarsForm({
               max={100}
               defaultValue={row.ratio || ""}
               placeholder="30"
-              className={inputClass}
+              className={`${selectClassName} tabular-nums`}
             />
             <input
               name={`pillar-${i}-keywords`}
               defaultValue={row.keywords}
               placeholder="例：導入, 事例, 削減"
-              className={inputClass}
+              className={selectClassName}
             />
           </div>
         ))}
       </section>
 
       <section className="space-y-3">
-        <div className="border-b border-ink-100 pb-2">
-          <h2 className="text-sm font-semibold text-ink-900">
+        <div className="border-b border-ink-100 pb-2.5">
+          <h2 className="text-[13px] font-semibold text-ink-900">
             目的別比率（Reach / Authority / Trust / Education / Conversion）
           </h2>
-          <p className="mt-1 text-xs text-ink-500">
+          <p className="mt-1 text-xs leading-relaxed text-ink-500">
             投稿を目的別に設計するための目標比率です。合計100%以内で調整してください。
           </p>
         </div>
@@ -100,7 +102,7 @@ export function PillarsForm({
                 min={0}
                 max={100}
                 defaultValue={p.ratio}
-                className={inputClass}
+                className={`${selectClassName} tabular-nums`}
               />
             </label>
           ))}

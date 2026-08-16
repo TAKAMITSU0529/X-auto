@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
-import { Card, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { BrandForm, type BrandDefaults } from "./brand-form";
 
 /**
@@ -45,13 +45,12 @@ export default async function BrandPage() {
   return (
     <>
       <PageHeader
+        eyebrow="設定"
         title="MY BRAND"
         description="あなた自身の情報・発信スタイル・禁止事項を登録します。投稿生成はこの設定を常に参照し、他人の言葉ではなく「あなたの発信」として出力します。"
       />
 
-      <Card className="max-w-3xl">
-        <BrandForm defaults={defaults} />
-      </Card>
+      <BrandForm defaults={defaults} />
     </>
   );
 }

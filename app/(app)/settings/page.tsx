@@ -6,6 +6,9 @@ import { isMockMode } from "@/lib/x-api";
 import { isAiMockMode } from "@/lib/ai";
 import {
   Card,
+  CardHeader,
+  EmptyState,
+  MeterBar,
   PageHeader,
   StatTile,
   formatNumber,
@@ -69,9 +72,14 @@ export default async function SettingsPage({
     .filter((r) => r.cached)
     .reduce((sum, r) => sum + (r._sum.units ?? 0), 0);
 
+  // MeterBar に rose はないため、警告・上限到達はどちらも amber で示し、
+  // 深刻度はバー右のラベルで区別する
+  const meterTone = budget.isWarning ? "amber" : "brand";
+
   return (
     <>
       <PageHeader
+        eyebrow="設定"
         title="設定"
         description="API利用量の確認と BUDGET LIMIT の設定を行います。"
       />
@@ -93,7 +101,7 @@ export default async function SettingsPage({
         />
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-ink-900">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
             API USAGE — 今月の利用状況
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -106,6 +114,7 @@ export default async function SettingsPage({
               label="今月"
               value={`$${monthlySpent.toFixed(2)}`}
               sub={`上限 $${budget.limitUsd.toFixed(2)}（${formatPercent(budget.usageRatio, 0)}）`}
+              accent
             />
             <StatTile
               label="今月の予想着地"
@@ -120,15 +129,54 @@ export default async function SettingsPage({
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink-900">
-              BUDGET LIMIT
-            </h2>
-            <p className="mb-4 text-xs text-ink-500">
-              上限に達すると取得系の機能を停止します。X 側の spending limits も
-              Developer Console で併せて設定してください。
-            </p>
+            <CardHeader
+              title="BUDGET LIMIT"
+              description="上限に達すると取得系の機能を停止します。X 側の spending limits も Developer Console で併せて設定してください。"
+            />
+
+            {/* 今の消化状況を、設定値の真上で確認できるようにする */}
+            <div className="mb-5 rounded-xl border border-ink-200/70 bg-ink-25 p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                  今月の消化
+                </span>
+                <span className="text-[13px] font-semibold tabular-nums text-ink-900">
+                  ${monthlySpent.toFixed(2)}
+                  <span className="text-ink-400">
+                    {" / "}${budget.limitUsd.toFixed(2)}
+                  </span>
+                </span>
+              </div>
+              <MeterBar
+                ratio={budget.usageRatio}
+                tone={meterTone}
+                className="mt-2.5"
+              />
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-500">
+                <span className="tabular-nums">
+                  使用率 {formatPercent(budget.usageRatio, 0)} · 警告ライン{" "}
+                  {formatPercent(budget.warningRatio, 0)}
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
+                    budget.isExceeded
+                      ? "bg-rose-100 text-rose-700"
+                      : budget.isWarning
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {budget.isExceeded
+                    ? "上限到達"
+                    : budget.isWarning
+                      ? "警告ライン超過"
+                      : "正常"}
+                </span>
+              </div>
+            </div>
+
             <BudgetForm
               defaults={{
                 monthlyLimitUsd: Number(setting.monthlyLimitUsd),
@@ -141,62 +189,67 @@ export default async function SettingsPage({
 
           <div className="space-y-6">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-ink-900">
-                内訳（今月）
-              </h2>
+              <CardHeader
+                title="内訳（今月）"
+                description="エンドポイントごとの呼び出し回数・件数・推定コスト。"
+              />
               {byEndpoint.length === 0 ? (
-                <p className="py-6 text-center text-sm text-ink-500">
-                  まだ API 呼び出しの記録がありません。
-                </p>
+                <EmptyState
+                  title="まだ API 呼び出しの記録がありません"
+                  description="リサーチや生成を実行すると、ここにエンドポイントごとの利用状況が記録されます。"
+                />
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-ink-200 text-left text-xs text-ink-500">
-                      <th className="pb-2 font-medium">エンドポイント</th>
-                      <th className="pb-2 text-right font-medium">回数</th>
-                      <th className="pb-2 text-right font-medium">件数</th>
-                      <th className="pb-2 text-right font-medium">コスト</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ink-100">
-                    {byEndpoint.map((row) => (
-                      <tr key={`${row.apiType}-${row.endpoint}-${row.cached}`}>
-                        <td className="py-2">
-                          <span className="mr-1.5 rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-ink-600">
-                            {row.apiType === ApiType.x ? "X" : "AI"}
-                          </span>
-                          {row.endpoint}
-                          {row.cached ? (
-                            <span className="ml-1.5 text-xs text-emerald-600">
-                              （キャッシュ）
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="py-2 text-right tabular-nums text-ink-600">
-                          {formatNumber(row._count)}
-                        </td>
-                        <td className="py-2 text-right tabular-nums text-ink-600">
-                          {formatNumber(row._sum.units ?? 0)}
-                        </td>
-                        <td className="py-2 text-right tabular-nums text-ink-800">
-                          ${Number(row._sum.estimatedCostUsd ?? 0).toFixed(4)}
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="border-b border-ink-200 text-left text-[11px] font-medium text-ink-500">
+                        <th className="pb-2 font-medium">エンドポイント</th>
+                        <th className="pb-2 text-right font-medium">回数</th>
+                        <th className="pb-2 text-right font-medium">件数</th>
+                        <th className="pb-2 text-right font-medium">コスト</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-ink-100">
+                      {byEndpoint.map((row) => (
+                        <tr key={`${row.apiType}-${row.endpoint}-${row.cached}`}>
+                          <td className="py-2.5 text-ink-800">
+                            <span className="mr-1.5 rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-ink-600">
+                              {row.apiType === ApiType.x ? "X" : "AI"}
+                            </span>
+                            {row.endpoint}
+                            {row.cached ? (
+                              <span className="ml-1.5 text-xs text-emerald-600">
+                                （キャッシュ）
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="py-2.5 text-right tabular-nums text-ink-600">
+                            {formatNumber(row._count)}
+                          </td>
+                          <td className="py-2.5 text-right tabular-nums text-ink-600">
+                            {formatNumber(row._sum.units ?? 0)}
+                          </td>
+                          <td className="py-2.5 text-right font-medium tabular-nums text-ink-900">
+                            ${Number(row._sum.estimatedCostUsd ?? 0).toFixed(4)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-              <p className="mt-3 text-xs text-ink-400">
+              <p className="mt-3 text-xs leading-relaxed text-ink-400">
                 コストは推定値です。実際の請求額は X Developer Console
                 の料金を正としてください。
               </p>
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-ink-900">
-                外部API接続
-              </h2>
-              <dl className="space-y-3 text-sm">
+              <CardHeader
+                title="外部API接続"
+                description="モックか実データかで、画面に出る内容が変わります。"
+              />
+              <dl className="divide-y divide-ink-100">
                 <ModeRow
                   label="X API"
                   mock={isMockMode()}
@@ -230,10 +283,10 @@ function ModeRow({
   realHint: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-ink-100 pb-3 last:border-0 last:pb-0">
-      <div>
-        <dt className="font-medium text-ink-800">{label}</dt>
-        <dd className="mt-0.5 text-xs text-ink-500">
+    <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <dt className="text-[13px] font-semibold text-ink-900">{label}</dt>
+        <dd className="mt-0.5 text-xs leading-relaxed text-ink-500">
           {mock ? (
             <>
               <code className="rounded bg-ink-100 px-1">{envVar}=real</code>
@@ -246,10 +299,8 @@ function ModeRow({
         </dd>
       </div>
       <span
-        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-          mock
-            ? "bg-amber-100 text-amber-800"
-            : "bg-emerald-100 text-emerald-800"
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          mock ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
         }`}
       >
         {mock ? "モック" : "実データ"}

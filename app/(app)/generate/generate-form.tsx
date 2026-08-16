@@ -1,9 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { generateAction, type GenerateState } from "./actions";
-import { Field, FormError, TextArea } from "@/components/form";
+import {
+  Field,
+  FormError,
+  SubmitButton,
+  TextArea,
+  selectClassName,
+} from "@/components/form";
 
 const initialState: GenerateState = { error: null };
 
@@ -43,13 +48,10 @@ export function GenerateForm({
           placeholder="例：中小企業のAI活用"
         />
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink-700">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-700">
             投稿の目的
           </span>
-          <select
-            name="purpose"
-            className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          >
+          <select name="purpose" className={selectClassName}>
             {PURPOSES.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -57,21 +59,18 @@ export function GenerateForm({
             ))}
           </select>
         </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink-700">
+        <label className="block sm:col-span-2">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-700">
             ターゲット段階（CUSTOMER JOURNEY）
           </span>
-          <select
-            name="journeyStage"
-            className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          >
+          <select name="journeyStage" className={selectClassName}>
             {JOURNEY_STAGES.map((s) => (
               <option key={s} value={s === "指定なし" ? "" : s}>
                 {s}
               </option>
             ))}
           </select>
-          <span className="mt-1 block text-xs text-ink-400">
+          <span className="mt-1.5 block text-xs leading-relaxed text-ink-400">
             マーケティング戦略（F-09）の段階設定。誰のどの段階向けの投稿かを指定できます
           </span>
         </label>
@@ -92,20 +91,12 @@ export function GenerateForm({
       />
 
       <FormError message={state.error} />
-      <GenerateSubmit />
+      <SubmitButton
+        fullWidth={false}
+        pendingLabel="生成中...（数十秒かかることがあります）"
+      >
+        3案を生成する
+      </SubmitButton>
     </form>
-  );
-}
-
-function GenerateSubmit() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "生成中...（数十秒かかることがあります）" : "3案を生成する"}
-    </button>
   );
 }

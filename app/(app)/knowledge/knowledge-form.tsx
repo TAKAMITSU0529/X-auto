@@ -8,6 +8,7 @@ import {
   FormSuccess,
   SubmitButton,
   TextArea,
+  selectClassName,
 } from "@/components/form";
 
 const initialState: KnowledgeFormState = { error: null, success: null };
@@ -19,13 +20,10 @@ export function KnowledgeForm({ kinds }: { kinds: readonly string[] }) {
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink-700">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-700">
             種類
           </span>
-          <select
-            name="kind"
-            className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          >
+          <select name="kind" className={selectClassName}>
             {kinds.map((k) => (
               <option key={k} value={k}>
                 {k}
@@ -55,7 +53,7 @@ export function KnowledgeForm({ kinds }: { kinds: readonly string[] }) {
 
       <FormError message={state.error} />
       <FormSuccess message={state.success} />
-      <SubmitButton>ナレッジを追加</SubmitButton>
+      <SubmitButton pendingLabel="追加中...">ナレッジを追加</SubmitButton>
     </form>
   );
 }

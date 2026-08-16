@@ -9,8 +9,10 @@ import {
 import { MIN_BASELINE_SAMPLE } from "@/lib/metrics/outlier";
 import {
   Card,
+  CardHeader,
   DataNote,
   EmptyState,
+  LinkButton,
   NextActionButton,
   OutlierBadge,
   PageHeader,
@@ -49,6 +51,7 @@ export default async function ResearchPage({
   return (
     <>
       <PageHeader
+        eyebrow="調べる"
         title="リサーチ"
         description="ベンチマークアカウントの投稿を取得し、そのアカウントの通常成績と比べて伸びた投稿を見つけます。"
       />
@@ -56,22 +59,18 @@ export default async function ResearchPage({
       {accounts.length === 0 ? (
         <EmptyState
           title="ベンチマークアカウントが未登録です"
-          description="リサーチを実行するには、先にベンチマークアカウントを登録してください。"
+          description="リサーチを実行するには、先にベンチマークアカウントを登録してください。登録が終わるとこの画面で投稿を取得できます。"
           action={
-            <Link
-              href="/benchmarks"
-              className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-            >
-              ベンチマークを登録する
-            </Link>
+            <LinkButton href="/benchmarks">ベンチマークを登録する</LinkButton>
           }
         />
       ) : (
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-ink-900">
-              リサーチを実行
-            </h2>
+            <CardHeader
+              title="リサーチを実行"
+              description="対象アカウントと取得件数を指定して、投稿を取り込みます。"
+            />
             <ResearchForm
               accounts={accounts.map((a) => ({
                 id: a.id,
@@ -103,6 +102,7 @@ export default async function ResearchPage({
                     ranking.posts.filter((p) => p.outlierScore >= 3).length,
                   )}
                   sub="モデリング候補"
+                  accent
                 />
                 <StatTile
                   label="フォロワー"
@@ -112,42 +112,60 @@ export default async function ResearchPage({
               </div>
 
               {!ranking.baseline.reliable ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                  ベースラインの算出サンプルが {ranking.baseline.sampleSize} 件と少ないため、
-                  外れ値スコアの信頼性は限定的です（{MIN_BASELINE_SAMPLE} 件以上を推奨）。
-                  取得件数を増やして再実行してください。
+                <div className="rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-relaxed text-amber-900">
+                  ベースラインの算出サンプルが{" "}
+                  <span className="font-semibold tabular-nums">
+                    {ranking.baseline.sampleSize}
+                  </span>{" "}
+                  件と少ないため、外れ値スコアの信頼性は限定的です（
+                  <span className="tabular-nums">{MIN_BASELINE_SAMPLE}</span>{" "}
+                  件以上を推奨）。 取得件数を増やして再実行してください。
                 </div>
               ) : null}
 
               <DataNote>
-                外れ値スコアは「その投稿のエンゲージメント率 ÷ このアカウントの通常エンゲージメント率（中央値）」で算出した実測値です。
-                SCORE は外れ値・量・質・新しさを合成した X AUTO IMPACT SCORE です。伸びた理由の解釈は各投稿の「この投稿を分析」から確認できます。
+                外れ値スコアは「その投稿のエンゲージメント率 ÷
+                このアカウントの通常エンゲージメント率（中央値）」で算出した実測値です。
+                SCORE は外れ値・量・質・新しさを合成した X AUTO IMPACT SCORE
+                です。伸びた理由の解釈は各投稿の「この投稿を分析」から確認できます。
               </DataNote>
 
               <Card>
+                <CardHeader
+                  title="外れ値の一括分析"
+                  description="外れ値上位20件をAIで横断分析し、勝ちパターンをライブラリに保存します"
+                />
                 <BatchAnalyzeForm accountId={accountId!} />
               </Card>
 
               <Card>
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-ink-900">
+                <CardHeader
+                  title="ランキング"
+                  description="最大50件を表示します。並び替えを変えると評価軸が切り替わります。"
+                  action={
+                    <a
+                      href={`/api/export/research?account=${accountId}&sort=${sortBy}`}
+                      download
+                      className="inline-flex items-center justify-center rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-xs transition duration-200 hover:border-ink-300 hover:bg-ink-50"
+                    >
+                      CSVダウンロード
+                    </a>
+                  }
+                />
+
+                <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-ink-100 pb-4">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
                     並び替え
                   </span>
-                  <a
-                    href={`/api/export/research?account=${accountId}&sort=${sortBy}`}
-                    className="order-last ml-auto rounded-md border border-ink-200 px-2.5 py-1 text-xs font-medium text-ink-600 transition hover:bg-ink-50"
-                    download
-                  >
-                    CSVダウンロード
-                  </a>
                   {SORT_KEYS.map((key) => (
                     <Link
                       key={key}
                       href={`/research?account=${accountId}&sort=${key}`}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                      aria-current={sortBy === key ? "true" : undefined}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition duration-200 ${
                         sortBy === key
-                          ? "bg-brand-600 text-white"
-                          : "border border-ink-200 text-ink-600 hover:bg-ink-50"
+                          ? "bg-brand-600 text-white shadow-xs"
+                          : "border border-ink-200 bg-white text-ink-600 hover:border-ink-300 hover:bg-ink-50"
                       }`}
                     >
                       {SORT_LABELS[key]}
@@ -156,54 +174,55 @@ export default async function ResearchPage({
                 </div>
 
                 {ranking.posts.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-ink-500">
-                    まだ投稿が取得されていません。上のフォームからリサーチを実行してください。
-                  </p>
+                  <EmptyState
+                    title="まだ投稿が取得されていません"
+                    description="上の「リサーチを実行」から取得件数を指定して実行すると、ここに外れ値スコア順で並びます。"
+                  />
                 ) : (
                   <ul className="divide-y divide-ink-100">
                     {ranking.posts.slice(0, 50).map((post, index) => (
-                      <li key={post.id} className="py-4">
-                        <div className="flex items-start gap-3">
-                          <span className="mt-1 w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-ink-400">
+                      <li key={post.id} className="py-4 first:pt-0 last:pb-0">
+                        <div className="flex items-start gap-3.5">
+                          <span className="mt-0.5 w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-ink-400">
                             {index + 1}
                           </span>
 
                           <div className="min-w-0 flex-1">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <div className="mb-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                               <OutlierBadge score={post.outlierScore} />
                               <span
-                                className="rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-700"
+                                className="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-700"
                                 title="X AUTO IMPACT SCORE (実測値からの合成指標)"
                               >
                                 SCORE {post.impactScore}
                               </span>
-                              <span className="text-xs text-ink-400">
+                              <span className="text-xs tabular-nums text-ink-500">
                                 ER {formatPercent(post.engagementRate)}
                                 {post.engagementBasis === "followers"
                                   ? "（フォロワー数基準）"
                                   : ""}
                               </span>
-                              <span className="text-xs text-ink-400">
+                              <span className="text-xs tabular-nums text-ink-400">
                                 {formatDateTime(post.postedAt)}
                               </span>
                             </div>
 
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-800">
+                            <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink-800">
                               {post.text.length > 220
                                 ? `${post.text.slice(0, 220)}…`
                                 : post.text}
                             </p>
 
-                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-ink-500">
-                              <span>
-                                インプレッション {formatNumber(post.metrics.impressions)}
-                              </span>
-                              <span>いいね {formatNumber(post.metrics.likes)}</span>
-                              <span>リポスト {formatNumber(post.metrics.reposts)}</span>
-                              <span>引用 {formatNumber(post.metrics.quotes)}</span>
-                              <span>返信 {formatNumber(post.metrics.replies)}</span>
-                              <span>ブックマーク {formatNumber(post.metrics.bookmarks)}</span>
-                            </div>
+                            <MetricList
+                              metrics={{
+                                impressions: post.metrics.impressions,
+                                likes: post.metrics.likes,
+                                reposts: post.metrics.reposts,
+                                quotes: post.metrics.quotes,
+                                replies: post.metrics.replies,
+                                bookmarks: post.metrics.bookmarks,
+                              }}
+                            />
 
                             {/* 3段目: 次にやること (要件定義 §8.1 / §59) */}
                             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -220,7 +239,7 @@ export default async function ResearchPage({
                                   href={post.permalink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-xs text-brand-600 hover:underline"
+                                  className="text-xs font-medium text-brand-600 transition duration-200 hover:text-brand-700 hover:underline"
                                 >
                                   元投稿を開く
                                 </a>
@@ -243,5 +262,39 @@ export default async function ResearchPage({
         </div>
       )}
     </>
+  );
+}
+
+const METRIC_LABELS: Array<[keyof MetricValues, string]> = [
+  ["impressions", "インプレッション"],
+  ["likes", "いいね"],
+  ["reposts", "リポスト"],
+  ["quotes", "引用"],
+  ["replies", "返信"],
+  ["bookmarks", "ブックマーク"],
+];
+
+type MetricValues = {
+  impressions: number;
+  likes: number;
+  reposts: number;
+  quotes: number;
+  replies: number;
+  bookmarks: number;
+};
+
+/** 実測メトリクス (DATA)。ラベルと数値の階層を分けて密度を保つ */
+function MetricList({ metrics }: { metrics: MetricValues }) {
+  return (
+    <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+      {METRIC_LABELS.map(([key, label]) => (
+        <div key={key} className="flex items-baseline gap-1.5">
+          <dt className="text-[11px] text-ink-400">{label}</dt>
+          <dd className="text-xs font-semibold tabular-nums text-ink-700">
+            {formatNumber(metrics[key])}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
