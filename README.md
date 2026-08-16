@@ -24,9 +24,31 @@ X運用の「リサーチ → 競合発見 → ヒット投稿抽出 → 勝ち�
 ### 必要なもの
 
 - Node.js 22 以上
-- PostgreSQL 16 以上
+- PostgreSQL 16 以上（起動していること）
 
 X API / Anthropic API の認証情報は**開発を始めるのに必須ではありません**。既定ではモックモードで動作し、認証情報なしで全画面を通しで確認できます。
+
+### 0. PostgreSQL の準備
+
+未インストールの場合はここから。インストール済みで起動している場合は次へ進んでください。
+
+```bash
+# macOS (Homebrew)
+brew install postgresql@16
+brew services start postgresql@16
+
+# createdb 等にPATHを通す（Apple Silicon。Intel Mac は /usr/local に読み替え）
+echo 'export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash
+# Debian/Ubuntu
+sudo apt install postgresql-16
+sudo service postgresql start
+```
+
+`pg_isready` が `accepting connections` を返せば起動しています。
 
 ### 手順
 
@@ -39,28 +61,46 @@ cp .env.example .env
 # AUTH_SECRET と TOKEN_ENCRYPTION_KEY は必ず自分で生成した値に置き換える
 #   openssl rand -base64 32
 
-# 3. データベースの用意（ローカル PostgreSQL の例）
-createdb xauto
-npx prisma migrate deploy
+# 3. データベースとロールの用意
+#    .env の DATABASE_URL は既定で xauto ロールを使うため、ロールも作る
+#    （macOS/Homebrew の初期状態には xauto ロールが無いので必須）
+createuser -s xauto
+psql -d postgres -c "ALTER USER xauto PASSWORD 'xauto_dev';"
+createdb -O xauto xauto
 
-# 4. サンプルデータの投入（任意だが推奨）
+# 4. スキーマの適用と Prisma クライアントの生成
+npx prisma migrate deploy
+npx prisma generate
+
+# 5. サンプルデータの投入（任意だが推奨）
 npm run db:seed
 
-# 5. 起動
+# 6. 起動
 npm run dev
 
-# 6. (別ターミナル) 予約投稿とメトリクス取得の worker
+# 7. (別ターミナル) 予約投稿とメトリクス取得の worker
 npm run worker
 ```
 
+> Linux で `createuser` が権限エラーになる場合は `sudo -u postgres createuser -s xauto` のように postgres ユーザーで実行してください。
+
 worker を起動しない場合でも、予約投稿画面の「期限が来た予約を今すぐ処理」・自己分析画面の「メトリクスを今すぐ取得」ボタンで手動実行できます。
 
-`http://localhost:3000` を開き、シードで作られるデモアカウントでログインできます。
+`http://localhost:3000` を開き、シードで作られるデモアカウントでログインできます。新規登録もできますが、データが空の状態から始まるため、まずはデモアカウントで全機能を確認するのがおすすめです。
 
 ```
 メールアドレス: demo@example.com
 パスワード:     password1234
 ```
+
+### つまずいたら
+
+| 症状 | 原因と対処 |
+|---|---|
+| `Cannot find module '.prisma/client/default'` | Prisma クライアントが未生成。`npx prisma generate` を実行する |
+| `Can't reach database server at 127.0.0.1:5432` | PostgreSQL が起動していない。上の「0. PostgreSQL の準備」を実行する |
+| `role "xauto" does not exist` | ロール未作成。手順3の `createuser -s xauto` から実行する |
+| `createdb: command not found` | PostgreSQL の PATH が通っていない。上の `export PATH=...` を実行する |
 
 ### 実データへの切り替え
 
