@@ -2,6 +2,7 @@ import { PostStatus, ScheduleStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { XApiService, isMockMode } from "@/lib/x-api";
 import { getValidAccessToken } from "@/lib/x-oauth";
+import { checkDuplicateAgainstOwnPosts } from "@/lib/generation/precheck";
 
 /**
  * 予約投稿 (要件定義 F-07) の中核処理。
@@ -19,6 +20,10 @@ export async function schedulePost(args: {
   generatedPostId: string;
   xAccountId: string;
   scheduledAt: Date;
+  /** スレッド (ツリー) 投稿の2投稿目以降 (F-07 拡張。任意) */
+  threadTexts?: string[];
+  /** 1投稿目に添付する画像URL (F-07 拡張。任意・最大4枚) */
+  mediaUrls?: string[];
 }): Promise<{ scheduledPostId: string }> {
   const generatedPost = await prisma.generatedPost.findFirst({
     where: { id: args.generatedPostId, userId: args.userId },
@@ -61,11 +66,34 @@ export async function schedulePost(args: {
     );
   }
 
+  // 実質同一 (酷似) コンテンツもブロックする (§12 / F-07 投稿前チェック)
+  const similarity = await checkDuplicateAgainstOwnPosts({
+    userId: args.userId,
+    text: generatedPost.selectedText,
+  });
+  if (similarity.isDuplicate) {
+    throw new Error(
+      `過去の投稿と実質同一の内容です (類似度 ${(similarity.maxScore * 100).toFixed(0)}%)。X の自動化ルールに抵触するため、内容を変えてから予約してください。`,
+    );
+  }
+
+  const threadTexts = (args.threadTexts ?? [])
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  const mediaUrls = (args.mediaUrls ?? [])
+    .map((u) => u.trim())
+    .filter((u) => /^https?:\/\//.test(u));
+  if (mediaUrls.length > 4) {
+    throw new Error("画像は4枚までにしてください。");
+  }
+
   const scheduled = await prisma.scheduledPost.create({
     data: {
       generatedPostId: generatedPost.id,
       xAccountId: xAccount.id,
       text: generatedPost.selectedText,
+      threadTexts,
+      mediaUrls,
       scheduledAt: args.scheduledAt,
       status: ScheduleStatus.scheduled,
     },
@@ -151,10 +179,41 @@ export async function processDueScheduledPosts(
         ? "mock-token"
         : await getValidAccessToken(item.xAccountId);
 
-      const { xPostId } = await new XApiService(userId).createPost({
+      const xApi = new XApiService(userId);
+
+      // 画像添付 (F-07 拡張): 1投稿目に添付する
+      const mediaIds: string[] = [];
+      for (const url of item.mediaUrls) {
+        const { mediaId } = await xApi.uploadMediaFromUrl({ accessToken, url });
+        mediaIds.push(mediaId);
+      }
+
+      const { xPostId } = await xApi.createPost({
         accessToken,
         text: item.text,
+        mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
       });
+
+      // スレッド投稿 (F-07 拡張): 直前の投稿への返信として順に投稿する。
+      // 1投稿目が出た後の失敗で全体をリトライすると二重投稿になるため、
+      // スレッドの失敗はリトライせず published のままエラーメモを残す
+      let threadError: string | null = null;
+      let replyTo = xPostId;
+      for (let t = 0; t < item.threadTexts.length; t++) {
+        try {
+          const { xPostId: replyId } = await xApi.createPost({
+            accessToken,
+            text: item.threadTexts[t],
+            replyToXPostId: replyTo,
+          });
+          replyTo = replyId;
+        } catch (error) {
+          threadError = `スレッド${t + 2}投稿目以降の投稿に失敗しました: ${
+            error instanceof Error ? error.message : "不明なエラー"
+          }`;
+          break;
+        }
+      }
 
       const postedAt = new Date();
 
@@ -165,7 +224,7 @@ export async function processDueScheduledPosts(
             status: ScheduleStatus.published,
             postedXPostId: xPostId,
             postedAt,
-            error: null,
+            error: threadError,
           },
         }),
         prisma.generatedPost.update({

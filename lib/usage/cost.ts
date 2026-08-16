@@ -13,7 +13,8 @@ export type XCostKey =
   | "posts.ownRead"
   | "posts.search"
   | "posts.create"
-  | "posts.createWithUrl";
+  | "posts.createWithUrl"
+  | "media.upload";
 
 /** X API: 1単位(=1件)あたりの推定コスト (USD) */
 export const X_UNIT_COST_USD: Record<XCostKey, number> = {
@@ -30,6 +31,8 @@ export const X_UNIT_COST_USD: Record<XCostKey, number> = {
   "posts.create": 0.012,
   // URL 付き投稿は割高
   "posts.createWithUrl": 0.2,
+  // メディアアップロード自体の課金は投稿側に含まれる想定 (要実測)
+  "media.upload": 0,
 };
 
 export type AiCostKey =
@@ -43,6 +46,7 @@ export type AiCostKey =
   | "ai.customerInsight"
   | "ai.playbook"
   | "ai.funnels"
+  | "ai.checkPost"
   | "ai.summarize";
 
 /**
@@ -60,6 +64,7 @@ export const AI_UNIT_COST_USD: Record<AiCostKey, number> = {
   "ai.customerInsight": 0.03,
   "ai.playbook": 0.05,
   "ai.funnels": 0.05,
+  "ai.checkPost": 0.02,
   "ai.summarize": 0.02,
 };
 

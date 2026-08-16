@@ -219,6 +219,30 @@ export type FunnelAnalysisResult = {
   adaptation: { steps: string[]; reason: string };
 };
 
+/** 投稿前AIチェックの1項目 (F-07 拡張) */
+export type PostCheckItem = {
+  /** readability / typos / hook / redundancy / targetFit / brandFit / cta / risk */
+  key: string;
+  label: string;
+  ok: boolean;
+  comment: string;
+};
+
+/**
+ * 投稿前AIチェックの結果 (F-07 拡張)。
+ * 類似投稿・重複チェックはルールベースで別途行う (lib/generation/precheck.ts)。
+ */
+export type PostCheckResult = {
+  items: PostCheckItem[];
+  /** ok = このまま投稿してよい / caution = 注意項目あり */
+  verdict: "ok" | "caution";
+  summary: string;
+  /** 「AIでもっと強くする」を選んだときに使う改善版本文 */
+  improvedText: string;
+  /** 改善版で何を変えたか */
+  improvementNote: string;
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -307,4 +331,11 @@ export interface AiProvider {
       ctaPosts: string[];
     }[];
   }): Promise<FunnelAnalysisResult>;
+
+  /** 投稿前AIチェック (F-07 拡張) */
+  checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult>;
 }

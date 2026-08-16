@@ -10,6 +10,7 @@ import type {
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -212,6 +213,20 @@ export class AiService {
       run: async () => ({
         result: await this.provider.analyzeFunnels(input),
       }),
+    });
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.checkPost",
+      units: 1,
+      run: async () => ({ result: await this.provider.checkPost(input) }),
     });
   }
 }

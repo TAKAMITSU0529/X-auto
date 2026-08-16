@@ -9,6 +9,7 @@ import {
   formatDateTime,
 } from "@/components/ui";
 import { ScheduleForm } from "./schedule-form";
+import { PreCheckPanel } from "./precheck-panel";
 import { RunNowButton } from "./run-now-button";
 import { cancelScheduleAction } from "./actions";
 
@@ -86,6 +87,7 @@ export default async function SchedulePage() {
                   <p className="mb-3 whitespace-pre-wrap rounded-lg bg-ink-50 px-3 py-2 text-sm leading-relaxed text-ink-800">
                     {draft.selectedText}
                   </p>
+                  <PreCheckPanel generatedPostId={draft.id} />
                   <ScheduleForm
                     generatedPostId={draft.id}
                     accounts={xAccounts.map((a) => ({
@@ -144,6 +146,19 @@ export default async function SchedulePage() {
                     <p className="line-clamp-2 whitespace-pre-wrap text-sm text-ink-700">
                       {item.text}
                     </p>
+                    {item.threadTexts.length > 0 || item.mediaUrls.length > 0 ? (
+                      <p className="mt-1 text-xs text-ink-400">
+                        {item.threadTexts.length > 0
+                          ? `スレッド全${item.threadTexts.length + 1}投稿`
+                          : null}
+                        {item.threadTexts.length > 0 && item.mediaUrls.length > 0
+                          ? " · "
+                          : null}
+                        {item.mediaUrls.length > 0
+                          ? `画像${item.mediaUrls.length}枚`
+                          : null}
+                      </p>
+                    ) : null}
                     {item.error ? (
                       <p className="mt-1 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
                         {item.error}

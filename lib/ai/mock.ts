@@ -5,6 +5,7 @@ import type {
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -498,6 +499,106 @@ export class MockAiProvider implements AiProvider {
         reason:
           "（モック）競合の多くは講座への直行動線ですが、あなたの強み（支援実績）は個別相談と相性が良いため、資料→相談を挟む動線が転用に適しています。",
       },
+    };
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    const text = input.text;
+    const firstLine = (text.split("\n").find((l) => l.trim()) ?? "").trim();
+
+    // 入力テキストから決定的にそれらしい判定を作る
+    const hasNumbers = /\d/.test(text);
+    const hasCta = /プロフ|固定|リンク|リプ|フォロー|相談|資料|DM/.test(text);
+    const riskWords = text.match(/絶対|100%|誰でも簡単|爆益|確実に稼げ/g) ?? [];
+    const tooLong = text.length > 400;
+    const redundant = /(という|こと|ような)を?(という|こと|ような)/.test(text);
+
+    const items = [
+      {
+        key: "readability",
+        label: "読みやすさ",
+        ok: !tooLong,
+        comment: tooLong
+          ? "400文字を超えています。改行と削減で読み切れる長さにしましょう"
+          : "適切な長さと改行です",
+      },
+      {
+        key: "typos",
+        label: "誤字・脱字",
+        ok: true,
+        comment: "明らかな誤字は見つかりませんでした（モック判定）",
+      },
+      {
+        key: "hook",
+        label: "書き出し (HOOK)",
+        ok: firstLine.length <= 30 && firstLine.length > 0,
+        comment:
+          firstLine.length > 30
+            ? "冒頭が長めです。最初の1文を短く切ると続きが読まれやすくなります"
+            : "冒頭で目を引ける長さです",
+      },
+      {
+        key: "redundancy",
+        label: "冗長性",
+        ok: !redundant,
+        comment: redundant
+          ? "同じ表現の繰り返しがあります。1つに絞りましょう"
+          : "冗長な繰り返しはありません",
+      },
+      {
+        key: "targetFit",
+        label: "ターゲット適合",
+        ok: Boolean(input.strategy),
+        comment: input.strategy
+          ? "マーケティング戦略のターゲット設定と大きな矛盾はありません"
+          : "マーケティング戦略が未設定のため確認できません。戦略ページで設定してください",
+      },
+      {
+        key: "brandFit",
+        label: "ブランド適合",
+        ok: Boolean(input.brand),
+        comment: input.brand
+          ? "MY BRAND のトーン・禁止事項と矛盾しません"
+          : "MY BRAND が未設定のため確認できません",
+      },
+      {
+        key: "cta",
+        label: "CTA",
+        ok: hasCta,
+        comment: hasCta
+          ? "行動誘導が含まれています"
+          : "行動誘導がありません。目的（認知/教育/販売）によっては無しでも構いません",
+      },
+      {
+        key: "risk",
+        label: "リスク表現",
+        ok: riskWords.length === 0,
+        comment:
+          riskWords.length > 0
+            ? `誇張・断定表現が含まれています: ${[...new Set(riskWords)].join("、")}。実績ベースの表現に置き換えてください`
+            : "誇張・断定などのリスク表現はありません",
+      },
+    ];
+
+    const ngCount = items.filter((i) => !i.ok).length;
+    const improvedText = hasNumbers
+      ? `${firstLine}\n\n${text.slice(firstLine.length).trim()}\n\n詳しくはプロフィールから。`.trim()
+      : `${firstLine}\n\n${text.slice(firstLine.length).trim()}\n\n（実際の数字を1つ入れるとさらに強くなります）`.trim();
+
+    return {
+      items,
+      verdict: ngCount === 0 ? "ok" : "caution",
+      summary:
+        ngCount === 0
+          ? "（モック）大きな問題は見つかりませんでした。このまま投稿できます。"
+          : `（モック）${ngCount}項目に改善余地があります。右の改善版も検討してください。`,
+      improvedText,
+      improvementNote:
+        "（モック）冒頭を1文で切り、CTAを明示しました。数字の追加も検討してください。",
     };
   }
 }

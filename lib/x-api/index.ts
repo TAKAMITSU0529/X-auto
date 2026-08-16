@@ -120,6 +120,8 @@ export class XApiService {
   async createPost(args: {
     accessToken: string;
     text: string;
+    mediaIds?: string[];
+    replyToXPostId?: string;
   }): Promise<{ xPostId: string }> {
     const hasUrl = /https?:\/\//.test(args.text);
     return withApiGuard({
@@ -128,6 +130,22 @@ export class XApiService {
       endpoint: hasUrl ? "posts.createWithUrl" : "posts.create",
       units: 1,
       run: async () => ({ result: await this.client.createPost(args) }),
+    });
+  }
+
+  /** 画像URLをXへアップロードしてメディアIDを得る (F-07 画像付き予約) */
+  async uploadMediaFromUrl(args: {
+    accessToken: string;
+    url: string;
+  }): Promise<{ mediaId: string }> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.x,
+      endpoint: "media.upload",
+      units: 1,
+      run: async () => ({
+        result: await this.client.uploadMediaFromUrl(args),
+      }),
     });
   }
 

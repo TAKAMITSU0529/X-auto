@@ -7,6 +7,7 @@ import type {
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -584,5 +585,47 @@ competitors は全員分。`;
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
     return extractJson<FunnelAnalysisResult>(raw);
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    const client = createClient();
+
+    const prompt = `次のX投稿を、投稿前の最終チェックとして9項目で点検してください。
+
+本文:
+"""
+${input.text}
+"""
+${input.brand ? `発信者の MY BRAND (トーン・禁止事項): ${JSON.stringify(input.brand)}` : "MY BRAND: 未設定"}
+${input.strategy ? `マーケティング戦略 (誰に・何を): ${JSON.stringify(input.strategy)}` : "マーケティング戦略: 未設定"}
+
+チェック項目 (key は固定):
+1. readability (読みやすさ) 2. typos (誤字・脱字) 3. hook (書き出し)
+4. redundancy (冗長性) 5. targetFit (ターゲット適合) 6. brandFit (ブランド適合)
+7. cta (CTA) 8. risk (リスク表現: 誇張・断定・炎上リスク・根拠のない効果主張)
+
+さらに improvedText として、指摘を反映した改善版本文を作ってください
+(発信者本人の言葉のまま強くする。事実の捏造・数字の水増しは禁止)。
+
+次のJSON形式で回答してください:
+{
+  "items": [
+    { "key": "readability", "label": "読みやすさ", "ok": true, "comment": "判定理由" }
+  ],
+  "verdict": "ok",
+  "summary": "総評 (1〜2文)",
+  "improvedText": "改善版の本文",
+  "improvementNote": "改善版で変えた点"
+}
+
+items は8項目すべて。1つでも ok=false があれば verdict は "caution"。
+未設定の項目 (brand/strategy) は ok=false とし、設定を促すコメントを書くこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
+    return extractJson<PostCheckResult>(raw);
   }
 }

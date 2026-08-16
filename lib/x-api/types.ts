@@ -88,7 +88,17 @@ export interface XApiClient {
   createPost(args: {
     accessToken: string;
     text: string;
+    /** 添付する画像のメディアID (uploadMediaFromUrl の戻り値) */
+    mediaIds?: string[];
+    /** スレッド (ツリー) 投稿: この投稿への返信として投稿する */
+    replyToXPostId?: string;
   }): Promise<{ xPostId: string }>;
+
+  /** 画像URLの内容を X にアップロードしてメディアIDを得る (F-07 拡張) */
+  uploadMediaFromUrl(args: {
+    accessToken: string;
+    url: string;
+  }): Promise<{ mediaId: string }>;
 
   /** 自分の投稿のメトリクスを取得する (F-10。非公開指標を含む) */
   getOwnPostMetrics(args: {

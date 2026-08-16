@@ -421,6 +421,10 @@ model ScheduledPost {
   generatedPostId String         @map("generated_post_id")
   xAccountId      String         @map("x_account_id")
   text            String
+  /// スレッド (ツリー) 投稿の2投稿目以降 (F-07 拡張)
+  threadTexts     String[]       @default([]) @map("thread_texts")
+  /// 1投稿目に添付する画像URL (F-07 拡張。投稿時にXへアップロードする)
+  mediaUrls       String[]       @default([]) @map("media_urls")
   scheduledAt     DateTime       @map("scheduled_at")
   status          ScheduleStatus @default(scheduled)
   retryCount      Int            @default(0) @map("retry_count")

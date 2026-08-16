@@ -66,6 +66,39 @@ export function ScheduleForm({
         <ScheduleSubmit />
       </div>
 
+      <details className="rounded-lg border border-ink-200 bg-ink-50/50 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-ink-600">
+          スレッド・画像を追加（任意）
+        </summary>
+        <div className="mt-2 space-y-2">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">
+              スレッド（2投稿目以降・空行2つで区切ると複数投稿）
+            </span>
+            <textarea
+              name="threadText"
+              rows={4}
+              placeholder={"2投稿目の本文\n\n\n3投稿目の本文"}
+              className="w-full rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-brand-500"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">
+              画像URL（1投稿目に添付・改行区切りで最大4枚）
+            </span>
+            <textarea
+              name="mediaUrlsText"
+              rows={2}
+              placeholder="https://example.com/image1.png"
+              className="w-full rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-brand-500"
+            />
+            <span className="mt-1 block text-[11px] text-ink-400">
+              投稿時にURLの画像をXへアップロードして添付します（5MBまで／モックモードでは記録のみ）
+            </span>
+          </label>
+        </div>
+      </details>
+
       <FormError message={state.error} />
       <FormSuccess message={state.success} />
     </form>

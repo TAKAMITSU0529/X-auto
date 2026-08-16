@@ -109,6 +109,8 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-02 出力 | **CSVエクスポート**（ランキングをBOM付きUTF-8でダウンロード） |
 | F-07 拡張 | **コンテンツカレンダー**（月・週表示。予約はドラッグ&ドロップで日付変更＝時刻維持・過去は拒否。F-10実績に基づくおすすめ時間帯サジェスト、F-18の不足テーマから生成へ連携。表示は日本時間に統一） |
 | F-10 拡張 | **CONTENT ANALYSIS テーマ別分析**（CONTENT PILLARSの柱で自己投稿を分類し、テーマ別の平均ER比較。ルールベース＝DATA扱い・AIコスト0） |
+| F-07 拡張 | **投稿前AIチェック**（読みやすさ・誤字・HOOK・冗長性・ターゲット適合・ブランド適合・CTA・リスク表現の8項目AI判定＋過去投稿との類似・重複チェック（ルールベース＝DATA）。「このまま投稿」/「AIでもっと強くする（改善版に差し替え）」を選択可能。実質同一コンテンツは予約自体をブロック） |
+| F-07 拡張 | **スレッド・画像付き予約**（スレッド（ツリー）投稿の予約＝2投稿目以降は返信として連鎖投稿、途中失敗は二重投稿を避けてエラーメモのみ。画像URL添付は投稿時にXへアップロード（最大4枚・5MBまで）） |
 
 ### 完了：Phase 3 全スライス（A〜E）
 
@@ -125,7 +127,7 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 
 ### 未実装（以降）
 
-- 画像/スレッド投稿・投稿前AIチェック・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
+- Phase 4（AI CHAT・AUTO CONTENT PLAN・SaaS化等）は要件定義 §10 参照
 
 ## 設計上の要点
 
@@ -167,6 +169,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase2b.ts` | Phase 2 スライスBの受け入れ確認（HOOK/形式/時間帯分析・週次レポート） |
 | `npx tsx scripts/verify-phase2c.ts` | Phase 2 スライスCの受け入れ確認（Personal Growth Model 補正・CSV） |
 | `npx tsx scripts/verify-phase2d.ts` | Phase 2 積み残しスライスDの受け入れ確認（カレンダー・テーマ別分析） |
+| `npx tsx scripts/verify-phase2e.ts` | Phase 2 積み残しスライスEの受け入れ確認（投稿前AIチェック・スレッド/画像予約） |
 | `npx tsx scripts/verify-phase3a.ts` | Phase 3 スライスAの受け入れ確認（トレンド分析・検索） |
 | `npx tsx scripts/verify-phase3b.ts` | Phase 3 スライスBの受け入れ確認（競合発見・COMPETITOR SCORE） |
 | `npx tsx scripts/verify-phase3c.ts` | Phase 3 スライスCの受け入れ確認（ポジショニング・プロフィール3案） |
