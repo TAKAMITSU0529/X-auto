@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getOwnPostsWithMetrics } from "@/lib/analytics/service";
 import { computePerformanceInsights } from "@/lib/analytics/insights";
+import { computeThemeAnalysis } from "@/lib/analytics/themes";
 import { getLatestWeeklyReport } from "@/lib/analytics/weekly-report";
 import { InsightsSection } from "./insights-section";
 import { WeeklyReportSection } from "./weekly-report-section";
@@ -20,9 +21,10 @@ import { SnapshotNowButton } from "./snapshot-now-button";
 /** 自己投稿分析 (F-10 基本表示)。 */
 export default async function AnalyticsPage() {
   const userId = await requireUserId();
-  const [posts, insights, latestReport] = await Promise.all([
+  const [posts, insights, themes, latestReport] = await Promise.all([
     getOwnPostsWithMetrics(userId),
     computePerformanceInsights(userId),
+    computeThemeAnalysis(userId),
     getLatestWeeklyReport(userId),
   ]);
 
@@ -145,6 +147,56 @@ export default async function AnalyticsPage() {
               「記録」は 1h/6h/24h/3d/7d/14d/30d の7チェックポイントのうち取得済みの数。
               スナップショットは worker（`npm run worker`）が5分ごとに確認します。
             </p>
+          </Card>
+
+          <Card>
+            <h2 className="text-sm font-semibold text-ink-900">
+              CONTENT ANALYSIS — テーマ別の平均エンゲージメント率
+            </h2>
+            {!themes.hasPillars ? (
+              <p className="mt-3 text-sm text-ink-500">
+                テーマ別分析には CONTENT PILLARS の設定が必要です。{" "}
+                <Link href="/pillars" className="font-medium text-brand-700 underline">
+                  ピラーを設定する →
+                </Link>
+              </p>
+            ) : themes.stats.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-500">
+                メトリクス取得済みの投稿がまだありません。
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <div className="space-y-2">
+                  {themes.stats.map((stat) => {
+                    const maxEr = themes.stats[0].avgEngagementRate || 1;
+                    return (
+                      <div key={stat.theme} className="flex items-center gap-3 text-sm">
+                        <span className="w-40 shrink-0 truncate text-ink-800">
+                          {stat.theme}
+                        </span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink-100">
+                          <div
+                            className="h-full rounded-full bg-brand-500"
+                            style={{
+                              width: `${Math.max(4, Math.round((stat.avgEngagementRate / maxEr) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="w-16 shrink-0 text-right text-xs tabular-nums text-ink-700">
+                          {formatPercent(stat.avgEngagementRate)}
+                        </span>
+                        <span className="w-12 shrink-0 text-right text-xs tabular-nums text-ink-400">
+                          {stat.count}件
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <DataNote>
+                  テーマは CONTENT PILLARS（F-18）の柱とキーワードによるルールベース分類です（実測の集計 = DATA）。件数が少ないテーマの数値は参考程度に見てください。
+                </DataNote>
+              </div>
+            )}
           </Card>
 
           <WeeklyReportSection

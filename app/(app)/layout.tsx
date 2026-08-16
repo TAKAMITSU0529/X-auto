@@ -21,6 +21,7 @@ const NAV = [
   { href: "/library", label: "ライブラリ" },
   { href: "/generate", label: "生成スタジオ" },
   { href: "/schedule", label: "予約投稿" },
+  { href: "/calendar", label: "カレンダー" },
   { href: "/analytics", label: "自己分析" },
   { href: "/brand", label: "MY BRAND" },
   { href: "/knowledge", label: "ナレッジ" },
