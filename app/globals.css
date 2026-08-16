@@ -1,22 +1,74 @@
 @import "tailwindcss";
 
-@theme {
-  --color-ink-50: #f7f8fa;
-  --color-ink-100: #eef0f4;
-  --color-ink-200: #dfe3ea;
-  --color-ink-300: #c3cad6;
-  --color-ink-400: #8b97a8;
-  --color-ink-500: #5f6b7e;
-  --color-ink-600: #45505f;
-  --color-ink-700: #333c48;
-  --color-ink-800: #212832;
-  --color-ink-900: #141a22;
+/**
+ * X AUTO デザインシステム
+ *
+ * 方針:
+ *  - 情報密度の高い業務ツールなので、色数は絞り「余白・階層・質感」で高級感を出す
+ *  - アクセントは1色 (brand) に統一し、意味色は要件定義 §9 の区分にだけ使う
+ *      violet = AI推定 (HYPOTHESIS) / ink = 実測 (DATA) / emerald = 次の行動 (ACTION)
+ *  - 影は単層ではなく多層にして、紙のような自然な浮き上がりにする
+ */
 
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9ebff;
-  --color-brand-500: #2f7de1;
-  --color-brand-600: #1f63bd;
-  --color-brand-700: #1a4f96;
+@theme {
+  /* ---- ニュートラル (わずかに青みを含ませて画面を締める) ---- */
+  --color-ink-25: #fcfcfe;
+  --color-ink-50: #f8f9fc;
+  --color-ink-100: #f1f3f8;
+  --color-ink-200: #e5e9f0;
+  --color-ink-300: #d0d7e3;
+  --color-ink-400: #98a4b8;
+  --color-ink-500: #6b7789;
+  --color-ink-600: #4d5867;
+  --color-ink-700: #39424f;
+  --color-ink-800: #252c37;
+  --color-ink-900: #151a23;
+  --color-ink-950: #0b0e15;
+
+  /* ---- アクセント (深みのあるロイヤルブルー) ---- */
+  --color-brand-50: #eff4ff;
+  --color-brand-100: #dbe6fe;
+  --color-brand-200: #c2d5fd;
+  --color-brand-300: #98b8fc;
+  --color-brand-400: #6791f8;
+  --color-brand-500: #426df2;
+  --color-brand-600: #2b4fe6;
+  --color-brand-700: #223dd3;
+  --color-brand-800: #2234ab;
+  --color-brand-900: #223187;
+  --color-brand-950: #192053;
+
+  /* ---- 多層シャドウ (単層のぼかしより自然な奥行きが出る) ---- */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-sm:
+    0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
+  --shadow-md:
+    0 2px 4px -2px rgb(16 24 40 / 0.05), 0 6px 12px -4px rgb(16 24 40 / 0.07);
+  --shadow-lg:
+    0 4px 8px -4px rgb(16 24 40 / 0.05), 0 16px 32px -12px rgb(16 24 40 / 0.12);
+  --shadow-xl:
+    0 8px 16px -8px rgb(16 24 40 / 0.06), 0 32px 56px -20px rgb(16 24 40 / 0.16);
+  /* カード用: ふちの締まりと浮遊感を両立させる */
+  --shadow-card:
+    0 0 0 1px rgb(16 24 40 / 0.03), 0 1px 2px rgb(16 24 40 / 0.04),
+    0 12px 28px -18px rgb(16 24 40 / 0.22);
+  --shadow-card-hover:
+    0 0 0 1px rgb(43 79 230 / 0.12), 0 2px 4px rgb(16 24 40 / 0.04),
+    0 18px 36px -18px rgb(16 24 40 / 0.28);
+  /* サイドバー用の内側ハイライト */
+  --shadow-inset-hairline: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+
+  /* ---- 角丸 ---- */
+  --radius-card: 0.875rem;
+
+  /* ---- タイポグラフィ ---- */
+  --font-sans:
+    var(--font-inter), var(--font-noto-sans-jp), -apple-system,
+    BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo,
+    sans-serif;
+
+  /* ---- イージング ---- */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
@@ -26,5 +78,73 @@
 body {
   background-color: var(--color-ink-50);
   color: var(--color-ink-800);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 日本語の可読性を上げる */
+  font-feature-settings: "palt" 1;
+  letter-spacing: 0.01em;
+}
+
+/* 見出しは字間を詰めて締まりを出す (日本語は詰めすぎないよう控えめに) */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* フォーカスリングを全体で統一。キーボード操作時のみ出す */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background-color: var(--color-brand-100);
+  color: var(--color-brand-900);
+}
+
+/* 情報密度が高い画面が多いのでスクロールバーを細く上品にする */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-300);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-ink-400);
+  background-clip: content-box;
+}
+
+/* 数値は等幅にして桁を揃える (ダッシュボードの比較がしやすくなる) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
