@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
@@ -23,6 +23,23 @@ export const metadata: Metadata = {
   title: "X AUTO",
   description:
     "Xリサーチ・競合分析・戦略設計・投稿生成・予約投稿・効果測定を統合したSNSグロースOS",
+  // ホーム画面に追加したときに単独アプリとして開き、名前もロゴに合わせる
+  appleWebApp: {
+    capable: true,
+    title: "X AUTO",
+    // ステータスバーを黒地に溶け込ませる
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  // 起動時とステータスバーの色をロゴの黒に合わせる
+  themeColor: "#0b0e15",
+  // ホーム画面起動時にセーフエリア (ノッチ・ホームバー) を扱えるようにする
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

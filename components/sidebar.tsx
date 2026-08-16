@@ -203,26 +203,32 @@ export function Sidebar({ footer }: { footer: React.ReactNode }) {
 
 function Wordmark({ tone }: { tone: "light" | "dark" }) {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-brand-400 to-brand-700 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(43,79,230,0.8)]">
-        X
+    <Link href="/dashboard" className="flex flex-col gap-1.5">
+      {/*
+        ロゴはシルバーの金属表現を含むため明るい背景では沈む。
+        モバイルのライトなトップバーでは暗い下地を敷いて視認性を保つ。
+      */}
+      <span
+        className={
+          tone === "light"
+            ? "inline-flex rounded-lg bg-ink-950 px-2.5 py-1.5"
+            : "inline-flex"
+        }
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/assets/logo-lockup.svg"
+          alt="X AUTO"
+          width={168}
+          height={48}
+          className={tone === "light" ? "h-6 w-auto" : "h-9 w-auto"}
+        />
       </span>
-      <span className="flex flex-col leading-none">
-        <span
-          className={`text-[15px] font-bold tracking-tight ${
-            tone === "dark" ? "text-white" : "text-ink-900"
-          }`}
-        >
-          X AUTO
+      {tone === "dark" ? (
+        <span className="pl-0.5 text-[9px] font-semibold uppercase tracking-[0.26em] text-ink-500">
+          Growth OS
         </span>
-        <span
-          className={`mt-1 text-[10px] tracking-wide ${
-            tone === "dark" ? "text-ink-500" : "text-ink-400"
-          }`}
-        >
-          GROWTH OS
-        </span>
-      </span>
+      ) : null}
     </Link>
   );
 }

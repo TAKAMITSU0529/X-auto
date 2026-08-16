@@ -13,7 +13,23 @@
 4. **密度を保つ。** 業務ツールなので、余白のために情報を削らない。
    1画面で判断できることを増やす方向で整える。
 
-## 2. 色
+## 2. ロゴ・アイコン
+
+| ファイル | 用途 |
+|---|---|
+| `public/assets/logo-lockup.svg` | 横組みロゴ。サイドバー・ログイン画面 |
+| `public/assets/app-icon.svg` | 正方形アイコンの原本 |
+| `public/assets/app-icon-maskable.svg` | Android のアダプティブアイコン用（Xマークのみ） |
+| `app/icon.png` / `app/apple-icon.png` | favicon / iOS ホーム画面アイコン |
+| `public/assets/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` | PWA マニフェスト用 |
+
+- ロゴはシルバーのグラデーションを含むため、**暗い背景に置く**。
+  明るい面に置くときは `bg-ink-950` の下地を敷く（モバイルのトップバーがこの扱い）
+- 彩色はAの抜きとOの光の2点だけ。ロゴ内に他の色を足さない
+- PNG は SVG から生成している。ロゴを変更したら SVG を直してから
+  PNG を作り直すこと（`app-icon.svg` → 各サイズへ書き出し）
+
+## 3. 色
 
 | 用途 | トークン |
 |---|---|
@@ -28,13 +44,13 @@
 
 `brand` を「重要そうだから」という理由で使わない。**押せるもの・現在地・主要指標**に限る。
 
-## 3. 影・角丸
+## 4. 影・角丸
 
 - カード: `rounded-card shadow-card`（`components/ui.tsx` の `Card` を使う）
 - 小要素: `rounded-lg` + `shadow-xs`
 - 押し上げ: `shadow-md` / `shadow-lg`。多層シャドウなので単層の `shadow` は使わない
 
-## 4. タイポグラフィ
+## 5. タイポグラフィ
 
 | 役割 | クラス |
 |---|---|
@@ -47,7 +63,7 @@
 
 日本語が主なので `text-sm` より `text-[13px]` を基準にする。
 
-## 5. 共通コンポーネント（`components/ui.tsx`）
+## 6. 共通コンポーネント（`components/ui.tsx`）
 
 | 名前 | 用途 |
 |---|---|
@@ -82,7 +98,7 @@
 - **`Button` と `SubmitButton`。** フォーム送信は `SubmitButton`
   (`useFormStatus` が pending を自動で拾う)。それ以外は `Button`
 
-## 6. レイアウト
+## 7. レイアウト
 
 - ページ全体の左右余白と最大幅は `app/(app)/layout.tsx` が持つ。画面側で `max-w-*` を足さない
 - 2カラムは `grid gap-6 lg:grid-cols-2 items-start`。
@@ -91,21 +107,21 @@
 - 表は `overflow-x-auto` で包み、`text-[13px]`、ヘッダは
   `text-[11px] font-medium text-ink-500`
 
-## 7. 状態
+## 8. 状態
 
 - ローディング: `Spinner` を伴うテキスト（「生成中...」など何をしているか書く）
 - 空: `EmptyState`
 - エラー: `FormError`（フォーム内）/ `rose` 系のカード（画面全体）
 - 無効: `opacity-50 cursor-not-allowed`
 
-## 8. モーション
+## 9. モーション
 
 - `transition duration-200`（通常）/ `duration-300`（カードの浮き上がり）
 - イージングは `ease-[cubic-bezier(0.22,1,0.36,1)]`
 - 動かすのは `transform` と `opacity`、`box-shadow` まで。レイアウトを動かさない
 - `prefers-reduced-motion` は `globals.css` で無効化済み
 
-## 9. やらないこと
+## 10. やらないこと
 
 - 新しい色・影・角丸をページ側で発明しない（必要なら `ui.tsx` に足す）
 - 絵文字をUIラベルに使わない（アイコンは `components/icons.tsx`）

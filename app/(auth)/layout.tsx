@@ -17,13 +17,16 @@ export default function AuthLayout({
 
       <div className="relative w-full max-w-[400px]">
         <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-lg font-bold text-white shadow-[0_8px_24px_-8px_rgba(43,79,230,0.9)]">
-            X
-          </span>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            X AUTO
-          </h1>
-          <p className="mt-2 text-[13px] text-ink-400">
+          <h1 className="sr-only">X AUTO</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/logo-lockup.svg"
+            alt="X AUTO"
+            width={320}
+            height={92}
+            className="h-16 w-auto"
+          />
+          <p className="mt-3 text-[13px] text-ink-400">
             調べる。考える。作る。投稿する。伸ばす。
           </p>
         </div>
