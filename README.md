@@ -102,7 +102,57 @@ worker を起動しない場合でも、予約投稿画面の「期限が来た�
 | `role "xauto" does not exist` | ロール未作成。手順3の `createuser -s xauto` から実行する |
 | `createdb: command not found` | PostgreSQL の PATH が通っていない。上の `export PATH=...` を実行する |
 
-### 実データへの切り替え
+## デプロイ（Vercel）
+
+### 1. プロジェクトを作る
+
+[vercel.com/new](https://vercel.com/new) からこのリポジトリを Import する。
+
+**Production Branch** は公開したいブランチに合わせる（Settings → Git から後で変更可）。
+
+### 2. データベースを用意する
+
+Vercel の Storage タブから Neon を作成すると `DATABASE_URL` が自動で設定される。
+
+マイグレーションはプーラ経由の接続では失敗するため、直接接続のURLが必要になる。
+Neon 連携は `DATABASE_URL_UNPOOLED` を自動で設定し、`prisma.config.ts` が
+それを優先して使うので**追加の設定は不要**。他のサービスを使う場合は
+`DIRECT_DATABASE_URL` に直接接続のURLを設定する。
+
+### 3. 環境変数を設定する
+
+Settings → Environment Variables に以下を追加する。値は `openssl rand -base64 32` で生成する。
+
+| 変数 | 内容 |
+|---|---|
+| `AUTH_SECRET` | セッションの署名鍵（必須） |
+| `TOKEN_ENCRYPTION_KEY` | X の OAuth トークンの暗号化鍵（X連携を使う場合は必須） |
+
+`X_API_MODE` / `AI_MODE` は未設定なら `mock` で動く。実データに切り替える場合は下記を参照。
+
+### 4. デプロイ
+
+Vercel は `vercel-build` スクリプトを優先して使うため、ビルド時に
+`prisma migrate deploy` が走り、初回デプロイでテーブルが作成される。
+
+サンプルデータを入れる場合は、手元から本番DBに対して1回だけ実行する。
+
+```bash
+DATABASE_URL="<本番の接続URL>" npm run db:seed
+```
+
+> **注意**: デモアカウント（`demo@example.com` / `password1234`）は公開リポジトリに
+> 書かれている。サイトを一般公開する場合はサンプルデータを入れないか、
+> Vercel の Deployment Protection で閲覧を制限すること。
+
+### 制約
+
+予約投稿とメトリクス取得の worker（`npm run worker`）は常駐プロセスのため
+Vercel では動かない。予約投稿画面の「期限が来た予約を今すぐ処理」・自己分析画面の
+「メトリクスを今すぐ取得」で手動実行するか、Vercel Cron から
+`processDueScheduledPosts` を叩くルートを別途用意する必要がある。
+
+## 実データへの切り替え
 
 `.env` の以下を変更すると、モックから実際の API 呼び出しに切り替わります。コードの変更は不要です。
 
