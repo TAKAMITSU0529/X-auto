@@ -125,9 +125,17 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-18 | **CONTENT PILLARS・投稿比率設計**（発信テーマの柱（最大6本）と目標比率＋目的別比率（Reach/Authority/Trust/Education/Conversion）を設計。直近の自己投稿をキーワード一致で分類＝DATA扱い・AIコスト0でズレを可視化し、不足テーマから生成へワンクリック連携） |
 | F-13 | **競合マネタイズ動線分析＋FUNNEL MAP**（登録済み競合の公開情報（bio・URL・投稿内CTA）から収益タイプと導線を分析。「確認済み」と「推定」を必ず区別表示、収益額等の非公開情報は推測しない。「自分が転用するならこの動線」の提案付き。外部サイトのクロールはせずDB内データのみでX APIコスト0） |
 
-### 未実装（以降）
+### 完了：Phase 4 スライスA
 
-- Phase 4（AI CHAT・AUTO CONTENT PLAN・SaaS化等）は要件定義 §10 参照
+| 機能 | 内容 |
+|---|---|
+| F-22 | **AI CHAT**（蓄積データ＝自己実績・柱のズレ・ベンチマーク・戦略設定・予算を文脈に持つ対話AI。回答は §9 に従い DATA（実測）/ AI推定（仮説）/ NEXT ACTION を必ず区別して表示。文脈の組み立てはDB内データのみでX APIコスト0） |
+| F-23 | **AUTO CONTENT PLAN**（「今月N投稿」と指示すると柱の比率・戦略・実績のおすすめ時間帯からAIが月間投稿計画を設計し、カレンダーに「計画」として配置。各計画はワンクリックで生成スタジオへ。配置されるのはネタであり、本文生成・予約は必ずユーザー承認を経る＝完全自動投稿はしない） |
+
+### 未実装（対象外の確定事項を含む）
+
+- F-08 Follow Graph 探索（APIコスト・レート制限が重いため v1 では非実装と要件定義 §7 で決定済み）
+- マルチXアカウント・マルチテナント・料金プラン・決済・チーム管理（SaaS化。外部決済サービス等が前提のため未実装）
 
 ## 設計上の要点
 
@@ -175,6 +183,7 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase3c.ts` | Phase 3 スライスCの受け入れ確認（ポジショニング・プロフィール3案） |
 | `npx tsx scripts/verify-phase3d.ts` | Phase 3 スライスDの受け入れ確認（マーケティング戦略AI・KNOWLEDGE BASE） |
 | `npx tsx scripts/verify-phase3e.ts` | Phase 3 スライスEの受け入れ確認（CONTENT PILLARS・動線分析） |
+| `npx tsx scripts/verify-phase4a.ts` | Phase 4 スライスAの受け入れ確認（AI CHAT・AUTO CONTENT PLAN） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック

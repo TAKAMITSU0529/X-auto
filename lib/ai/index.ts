@@ -6,7 +6,10 @@ import { MockAiProvider } from "@/lib/ai/mock";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
@@ -227,6 +230,37 @@ export class AiService {
       endpoint: "ai.checkPost",
       units: 1,
       run: async () => ({ result: await this.provider.checkPost(input) }),
+    });
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.chat",
+      units: 1,
+      run: async () => ({ result: await this.provider.chat(input) }),
+    });
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.contentPlan",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generateContentPlan(input),
+      }),
     });
   }
 }

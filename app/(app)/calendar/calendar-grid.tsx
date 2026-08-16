@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
-import { reschedulePostAction } from "./actions";
+import { deleteIdeaAction, reschedulePostAction } from "./actions";
 import type { CalendarEntry, CalendarWeek } from "@/lib/calendar/service";
+import type { PlannedIdea } from "@/lib/plan/service";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -27,11 +29,14 @@ const STATUS_LABELS: Record<string, string> = {
 export function CalendarGrid({
   weeks,
   entries,
+  ideas,
   monthKey,
   todayKey,
 }: {
   weeks: CalendarWeek[];
   entries: CalendarEntry[];
+  /** AUTO CONTENT PLAN (F-23) で配置された投稿アイデア */
+  ideas: PlannedIdea[];
   /** YYYY-MM (この月以外のセルは薄く表示) */
   monthKey: string;
   todayKey: string;
@@ -45,6 +50,13 @@ export function CalendarGrid({
     const list = byDate.get(entry.dateKey) ?? [];
     list.push(entry);
     byDate.set(entry.dateKey, list);
+  }
+
+  const ideasByDate = new Map<string, PlannedIdea[]>();
+  for (const idea of ideas) {
+    const list = ideasByDate.get(idea.dateKey) ?? [];
+    list.push(idea);
+    ideasByDate.set(idea.dateKey, list);
   }
 
   const handleDrop = (dateKey: string, event: React.DragEvent) => {
@@ -87,6 +99,7 @@ export function CalendarGrid({
               const inMonth = dateKey.startsWith(monthKey);
               const isToday = dateKey === todayKey;
               const dayEntries = byDate.get(dateKey) ?? [];
+              const dayIdeas = ideasByDate.get(dateKey) ?? [];
 
               return (
                 <div
@@ -140,6 +153,41 @@ export function CalendarGrid({
                           {STATUS_LABELS[entry.status] ?? entry.status}
                         </span>
                         <p className="mt-0.5 line-clamp-2">{entry.text}</p>
+                      </div>
+                    ))}
+
+                    {dayIdeas.map((idea) => (
+                      <div
+                        key={idea.generatedPostId}
+                        title={`${idea.title}\n${idea.angle}`}
+                        className="rounded border border-dashed border-ink-300 bg-ink-50 px-1.5 py-1 text-[11px] leading-tight text-ink-600"
+                      >
+                        <span className="rounded bg-ink-200 px-1 text-[10px] font-bold text-ink-700">
+                          計画
+                        </span>
+                        <span className="ml-1 tabular-nums">{idea.time}</span>
+                        <p className="mt-0.5 line-clamp-2">{idea.title}</p>
+                        <p className="mt-0.5 flex items-center gap-1.5">
+                          <Link
+                            href={`/generate?genre=${encodeURIComponent(idea.pillar)}&message=${encodeURIComponent(`${idea.title} — ${idea.angle}`)}`}
+                            className="font-semibold text-brand-700 hover:underline"
+                          >
+                            生成する
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const fd = new FormData();
+                              fd.set("generatedPostId", idea.generatedPostId);
+                              startTransition(async () => {
+                                await deleteIdeaAction(fd);
+                              });
+                            }}
+                            className="text-ink-400 hover:text-red-600"
+                          >
+                            削除
+                          </button>
+                        </p>
                       </div>
                     ))}
                   </div>

@@ -47,6 +47,8 @@ export type AiCostKey =
   | "ai.playbook"
   | "ai.funnels"
   | "ai.checkPost"
+  | "ai.chat"
+  | "ai.contentPlan"
   | "ai.summarize";
 
 /**
@@ -65,6 +67,8 @@ export const AI_UNIT_COST_USD: Record<AiCostKey, number> = {
   "ai.playbook": 0.05,
   "ai.funnels": 0.05,
   "ai.checkPost": 0.02,
+  "ai.chat": 0.03,
+  "ai.contentPlan": 0.06,
   "ai.summarize": 0.02,
 };
 

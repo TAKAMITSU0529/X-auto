@@ -1,7 +1,10 @@
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
@@ -599,6 +602,105 @@ export class MockAiProvider implements AiProvider {
       improvedText,
       improvementNote:
         "（モック）冒頭を1文で切り、CTAを明示しました。数字の追加も検討してください。",
+    };
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    const ctx = (input.context ?? {}) as {
+      ownPostCount?: number;
+      avgEngagementRate?: number;
+      bestHook?: string | null;
+      bestSlot?: string | null;
+      lackingPillar?: string | null;
+    };
+
+    const dataPoints: string[] = [];
+    if (typeof ctx.ownPostCount === "number") {
+      dataPoints.push(`投稿実績: ${ctx.ownPostCount}件`);
+    }
+    if (typeof ctx.avgEngagementRate === "number") {
+      dataPoints.push(
+        `平均エンゲージメント率: ${(ctx.avgEngagementRate * 100).toFixed(2)}%`,
+      );
+    }
+    if (ctx.bestHook) dataPoints.push(`最も反応が高い書き出し: ${ctx.bestHook}`);
+    if (ctx.bestSlot) dataPoints.push(`最も成績の良い時間帯: ${ctx.bestSlot}`);
+
+    return {
+      answer: `（モック）「${input.question}」への回答です。あなたの実測データでは${
+        ctx.bestHook ? `「${ctx.bestHook}」の書き出し` : "具体的な数字を含む投稿"
+      }が伸びており、まずはそこを強化するのが近道です。`,
+      dataPoints:
+        dataPoints.length > 0 ? dataPoints : ["実測データがまだ少ない状態です"],
+      hypotheses: [
+        "実例と数字を含む投稿はターゲットの意思決定者に刺さりやすいと推定されます",
+        ctx.lackingPillar
+          ? `「${ctx.lackingPillar}」テーマの発信量を増やすと設計比率に近づきます`
+          : "テーマの偏りを減らすと新規リーチが安定すると推定されます",
+      ],
+      nextActions: [
+        ctx.bestSlot
+          ? `${ctx.bestSlot}に次の投稿を予約してください`
+          : "今週3件の投稿を予約してください",
+        "外れ値上位の投稿を1件選び「この型で作る」で生成してください",
+      ],
+    };
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    const ctx = (input.context ?? {}) as {
+      pillars?: { name: string; ratio: number }[];
+      bestTime?: string | null;
+    };
+    const pillars =
+      ctx.pillars && ctx.pillars.length > 0
+        ? ctx.pillars
+        : [{ name: "AI活用", ratio: 100 }];
+    const purposes = ["Reach", "Authority", "Trust", "Education", "Conversion"];
+    const time = ctx.bestTime ?? "19:00";
+
+    // 期間内に等間隔で配置する
+    const start = new Date(`${input.startDate}T00:00:00Z`);
+    const end = new Date(`${input.endDate}T00:00:00Z`);
+    const totalDays = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 86400000),
+    );
+    const step = Math.max(1, Math.floor(totalDays / input.count));
+
+    const items = Array.from({ length: input.count }, (_, i) => {
+      const d = new Date(start.getTime());
+      d.setUTCDate(d.getUTCDate() + Math.min(totalDays - 1, i * step));
+      const pillar = pillars[i % pillars.length];
+      const purpose = purposes[i % purposes.length];
+      return {
+        date: d.toISOString().slice(0, 10),
+        time,
+        pillar: pillar.name,
+        purpose,
+        title: `（モック）${pillar.name}のネタ ${Math.floor(i / pillars.length) + 1}`,
+        angle: `${pillar.name}について、${
+          purpose === "Reach"
+            ? "意外な事実のフックで新規向けに"
+            : purpose === "Conversion"
+              ? "事例と一緒に商品への導線を添えて"
+              : "実例と数字を根拠に"
+        }発信する`,
+      };
+    });
+
+    return {
+      items,
+      note: `（モック）${input.startDate}〜${input.endDate} に ${input.count} 件を、柱の比率と目的 (Reach/Authority/Trust/Education/Conversion) を循環させて配置しました。`,
     };
   }
 }

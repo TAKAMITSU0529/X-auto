@@ -9,12 +9,14 @@ import {
 } from "@/lib/calendar/service";
 import { computePerformanceInsights } from "@/lib/analytics/insights";
 import { computePillarBalance } from "@/lib/pillars/service";
+import { getPlannedIdeas } from "@/lib/plan/service";
 import {
   DataNote,
   NextActionButton,
   PageHeader,
 } from "@/components/ui";
 import { CalendarGrid } from "./calendar-grid";
+import { PlanForm } from "./plan-form";
 
 /**
  * コンテンツカレンダー (F-07【A】)。
@@ -52,8 +54,13 @@ export default async function CalendarPage({
     weeks[weeks.length - 1].dateKeys[6],
   );
 
-  const [entries, insights, pillarReport] = await Promise.all([
+  const [entries, ideas, insights, pillarReport] = await Promise.all([
     getCalendarEntries({ userId, from, to }),
+    getPlannedIdeas({
+      userId,
+      firstDateKey: weeks[0].dateKeys[0],
+      lastDateKey: weeks[weeks.length - 1].dateKeys[6],
+    }),
     computePerformanceInsights(userId),
     computePillarBalance(userId),
   ]);
@@ -125,9 +132,14 @@ export default async function CalendarPage({
         ) : null}
       </div>
 
+      <div className="mb-4">
+        <PlanForm defaultStartDate={todayKey} />
+      </div>
+
       <CalendarGrid
         weeks={weeks}
         entries={entries}
+        ideas={ideas}
         monthKey={monthKey}
         todayKey={todayKey}
       />

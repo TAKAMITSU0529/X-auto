@@ -243,6 +243,44 @@ export type PostCheckResult = {
   improvementNote: string;
 };
 
+/**
+ * AI CHAT (F-22) の1回の応答。
+ * §9 に従い、確認できた事実 (DATA)・AI仮説 (HYPOTHESIS)・
+ * 次の行動 (ACTION) を必ず区別して返す。
+ */
+export type ChatReply = {
+  /** 会話としての回答本文 */
+  answer: string;
+  /** 回答の根拠になった実測データ (DATA) */
+  dataPoints: string[];
+  /** AIによる仮説・推定 (HYPOTHESIS) */
+  hypotheses: string[];
+  /** 次にやること (ACTION) */
+  nextActions: string[];
+};
+
+export type ChatMessage = { role: "user" | "assistant"; text: string };
+
+/** AUTO CONTENT PLAN (F-23) の計画1件 */
+export type ContentPlanItem = {
+  /** 投稿予定日 (YYYY-MM-DD) */
+  date: string;
+  /** 推奨時間帯 (例: "19:00") */
+  time: string;
+  /** どの柱 (F-18) の投稿か */
+  pillar: string;
+  /** 目的 (Reach/Authority/Trust/Education/Conversion) */
+  purpose: string;
+  title: string;
+  angle: string;
+};
+
+export type ContentPlanResult = {
+  items: ContentPlanItem[];
+  /** 計画の設計意図 */
+  note: string;
+};
+
 export interface AiProvider {
   /** 投稿を分析する (F-04) */
   analyzePost(input: {
@@ -338,4 +376,20 @@ export interface AiProvider {
     brand?: unknown;
     strategy?: unknown;
   }): Promise<PostCheckResult>;
+
+  /** AI CHAT (F-22): 蓄積データを文脈に質問へ答える */
+  chat(input: {
+    question: string;
+    history: ChatMessage[];
+    /** DB から組み立てた実測データの要約 (DATA) */
+    context: unknown;
+  }): Promise<ChatReply>;
+
+  /** AUTO CONTENT PLAN (F-23): 月間投稿計画を設計する */
+  generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult>;
 }

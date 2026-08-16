@@ -3,7 +3,10 @@ import { env } from "@/lib/env";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
   CustomerInsightResult,
   FunnelAnalysisResult,
   PlaybookResult,
@@ -627,5 +630,94 @@ items は8項目すべて。1つでも ok=false があれば verdict は "cautio
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
     return extractJson<PostCheckResult>(raw);
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    const client = createClient();
+
+    const historySection =
+      input.history.length > 0
+        ? `これまでの会話:\n${input.history
+            .slice(-8)
+            .map((m) => `${m.role === "user" ? "ユーザー" : "AI"}: ${m.text}`)
+            .join("\n")}\n`
+        : "";
+
+    const prompt = `あなたは X AUTO AI。このユーザーのX運用データすべてにアクセスできる相談相手です。
+
+ユーザーの実測データの要約 (事実):
+${JSON.stringify(input.context, null, 2)}
+
+${historySection}
+質問: ${input.question}
+
+回答ルール:
+- dataPoints には上の実測データから引用できる事実だけを入れる
+- hypotheses にはあなたの推定・仮説を入れる (事実と混同しないこと)
+- nextActions は「明日◯◯を投稿する」のような具体的な行動にする
+- データが足りない場合は正直に足りないと言う
+
+次のJSON形式で回答してください:
+{
+  "answer": "会話としての回答 (2〜4文)",
+  "dataPoints": ["根拠にした実測データ"],
+  "hypotheses": ["あなたの仮説"],
+  "nextActions": ["次の具体的な行動 (1〜3個)"]
+}`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    return extractJson<ChatReply>(raw);
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    const client = createClient();
+
+    const prompt = `X の月間投稿計画を設計してください (AUTO CONTENT PLAN)。
+
+期間: ${input.startDate} 〜 ${input.endDate}
+投稿数: ${input.count}件
+
+ユーザーの設定・実測データ (事実):
+${JSON.stringify(input.context, null, 2)}
+
+設計ルール:
+- CONTENT PILLARS (柱と比率) があればその比率に沿ってテーマを配分する
+- 目的 (Reach/Authority/Trust/Education/Conversion) をバランスさせる
+- 実績上のおすすめ時間帯があれば time に反映する
+- ネタ (title/angle) は本人の強み・実績・ナレッジと結びつける
+- 同じ切り口を連日並べない
+
+次のJSON形式で回答してください:
+{
+  "items": [
+    {
+      "date": "YYYY-MM-DD",
+      "time": "19:00",
+      "pillar": "柱の名前",
+      "purpose": "Reach",
+      "title": "ネタのタイトル",
+      "angle": "切り口・何をどう書くか"
+    }
+  ],
+  "note": "この計画の設計意図 (2〜3文)"
+}
+
+items はちょうど ${input.count} 件。date は期間内に収めること。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 8192);
+    const parsed = extractJson<ContentPlanResult>(raw);
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      throw new Error("AIから有効な投稿計画が返りませんでした。");
+    }
+    return parsed;
   }
 }

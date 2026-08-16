@@ -9,6 +9,7 @@ import { NavLink } from "@/components/nav-link";
 
 const NAV = [
   { href: "/dashboard", label: "ダッシュボード" },
+  { href: "/chat", label: "AI CHAT" },
   { href: "/benchmarks", label: "ベンチマーク" },
   { href: "/competitors", label: "競合発見" },
   { href: "/funnels", label: "動線分析" },
