@@ -32,7 +32,18 @@ const envSchema = z.object({
 });
 
 function loadEnv() {
-  const parsed = envSchema.safeParse(process.env);
+  // ホスティング先のUIで「検出された環境変数」を空欄のまま保存すると、
+  // 未設定ではなく空文字列 "" として渡ってくることがある。
+  // 空文字列は zod の .default() を素通りしてしまう (undefined でないため) ので、
+  // ここで空文字列を undefined に正規化してからパースする。
+  const normalized = Object.fromEntries(
+    Object.entries(process.env).map(([key, value]) => [
+      key,
+      value === "" ? undefined : value,
+    ]),
+  );
+
+  const parsed = envSchema.safeParse(normalized);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
