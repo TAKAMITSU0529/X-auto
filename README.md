@@ -24,9 +24,31 @@ X運用の「リサーチ → 競合発見 → ヒット投稿抽出 → 勝ち�
 ### 必要なもの
 
 - Node.js 22 以上
-- PostgreSQL 16 以上
+- PostgreSQL 16 以上（起動していること）
 
 X API / Anthropic API の認証情報は**開発を始めるのに必須ではありません**。既定ではモックモードで動作し、認証情報なしで全画面を通しで確認できます。
+
+### 0. PostgreSQL の準備
+
+未インストールの場合はここから。インストール済みで起動している場合は次へ進んでください。
+
+```bash
+# macOS (Homebrew)
+brew install postgresql@16
+brew services start postgresql@16
+
+# createdb 等にPATHを通す（Apple Silicon。Intel Mac は /usr/local に読み替え）
+echo 'export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash
+# Debian/Ubuntu
+sudo apt install postgresql-16
+sudo service postgresql start
+```
+
+`pg_isready` が `accepting connections` を返せば起動しています。
 
 ### 手順
 
@@ -39,30 +61,98 @@ cp .env.example .env
 # AUTH_SECRET と TOKEN_ENCRYPTION_KEY は必ず自分で生成した値に置き換える
 #   openssl rand -base64 32
 
-# 3. データベースの用意（ローカル PostgreSQL の例）
-createdb xauto
-npx prisma migrate deploy
+# 3. データベースとロールの用意
+#    .env の DATABASE_URL は既定で xauto ロールを使うため、ロールも作る
+#    （macOS/Homebrew の初期状態には xauto ロールが無いので必須）
+createuser -s xauto
+psql -d postgres -c "ALTER USER xauto PASSWORD 'xauto_dev';"
+createdb -O xauto xauto
 
-# 4. サンプルデータの投入（任意だが推奨）
+# 4. スキーマの適用と Prisma クライアントの生成
+npx prisma migrate deploy
+npx prisma generate
+
+# 5. サンプルデータの投入（任意だが推奨）
 npm run db:seed
 
-# 5. 起動
+# 6. 起動
 npm run dev
 
-# 6. (別ターミナル) 予約投稿とメトリクス取得の worker
+# 7. (別ターミナル) 予約投稿とメトリクス取得の worker
 npm run worker
 ```
 
+> Linux で `createuser` が権限エラーになる場合は `sudo -u postgres createuser -s xauto` のように postgres ユーザーで実行してください。
+
 worker を起動しない場合でも、予約投稿画面の「期限が来た予約を今すぐ処理」・自己分析画面の「メトリクスを今すぐ取得」ボタンで手動実行できます。
 
-`http://localhost:3000` を開き、シードで作られるデモアカウントでログインできます。
+`http://localhost:3000` を開き、シードで作られるデモアカウントでログインできます。新規登録もできますが、データが空の状態から始まるため、まずはデモアカウントで全機能を確認するのがおすすめです。
 
 ```
 メールアドレス: demo@example.com
 パスワード:     password1234
 ```
 
-### 実データへの切り替え
+### つまずいたら
+
+| 症状 | 原因と対処 |
+|---|---|
+| `Cannot find module '.prisma/client/default'` | Prisma クライアントが未生成。`npx prisma generate` を実行する |
+| `Can't reach database server at 127.0.0.1:5432` | PostgreSQL が起動していない。上の「0. PostgreSQL の準備」を実行する |
+| `role "xauto" does not exist` | ロール未作成。手順3の `createuser -s xauto` から実行する |
+| `createdb: command not found` | PostgreSQL の PATH が通っていない。上の `export PATH=...` を実行する |
+
+## デプロイ（Vercel）
+
+### 1. プロジェクトを作る
+
+[vercel.com/new](https://vercel.com/new) からこのリポジトリを Import する。
+
+**Production Branch** は公開したいブランチに合わせる（Settings → Git から後で変更可）。
+
+### 2. データベースを用意する
+
+Vercel の Storage タブから Neon を作成すると `DATABASE_URL` が自動で設定される。
+
+マイグレーションはプーラ経由の接続では失敗するため、直接接続のURLが必要になる。
+Neon 連携は `DATABASE_URL_UNPOOLED` を自動で設定し、`prisma.config.ts` が
+それを優先して使うので**追加の設定は不要**。他のサービスを使う場合は
+`DIRECT_DATABASE_URL` に直接接続のURLを設定する。
+
+### 3. 環境変数を設定する
+
+Settings → Environment Variables に以下を追加する。値は `openssl rand -base64 32` で生成する。
+
+| 変数 | 内容 |
+|---|---|
+| `AUTH_SECRET` | セッションの署名鍵（必須） |
+| `TOKEN_ENCRYPTION_KEY` | X の OAuth トークンの暗号化鍵（X連携を使う場合は必須） |
+
+`X_API_MODE` / `AI_MODE` は未設定なら `mock` で動く。実データに切り替える場合は下記を参照。
+
+### 4. デプロイ
+
+Vercel は `vercel-build` スクリプトを優先して使うため、ビルド時に
+`prisma migrate deploy` が走り、初回デプロイでテーブルが作成される。
+
+サンプルデータを入れる場合は、手元から本番DBに対して1回だけ実行する。
+
+```bash
+DATABASE_URL="<本番の接続URL>" npm run db:seed
+```
+
+> **注意**: デモアカウント（`demo@example.com` / `password1234`）は公開リポジトリに
+> 書かれている。サイトを一般公開する場合はサンプルデータを入れないか、
+> Vercel の Deployment Protection で閲覧を制限すること。
+
+### 制約
+
+予約投稿とメトリクス取得の worker（`npm run worker`）は常駐プロセスのため
+Vercel では動かない。予約投稿画面の「期限が来た予約を今すぐ処理」・自己分析画面の
+「メトリクスを今すぐ取得」で手動実行するか、Vercel Cron から
+`processDueScheduledPosts` を叩くルートを別途用意する必要がある。
+
+## 実データへの切り替え
 
 `.env` の以下を変更すると、モックから実際の API 呼び出しに切り替わります。コードの変更は不要です。
 
@@ -107,8 +197,12 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-21 完成 | **AI INSIGHT**（ダッシュボードに実測傾向（DATA）とNEXT BEST ACTION（AI推定）を表示） |
 | F-19 補正 | **Personal Growth Model 補正**（本人実績3件以上で、伸びているHOOK/形式に一致する案の予測スコアを加点。補正理由と基礎点を明示） |
 | F-02 出力 | **CSVエクスポート**（ランキングをBOM付きUTF-8でダウンロード） |
+| F-07 拡張 | **コンテンツカレンダー**（月・週表示。予約はドラッグ&ドロップで日付変更＝時刻維持・過去は拒否。F-10実績に基づくおすすめ時間帯サジェスト、F-18の不足テーマから生成へ連携。表示は日本時間に統一） |
+| F-10 拡張 | **CONTENT ANALYSIS テーマ別分析**（CONTENT PILLARSの柱で自己投稿を分類し、テーマ別の平均ER比較。ルールベース＝DATA扱い・AIコスト0） |
+| F-07 拡張 | **投稿前AIチェック**（読みやすさ・誤字・HOOK・冗長性・ターゲット適合・ブランド適合・CTA・リスク表現の8項目AI判定＋過去投稿との類似・重複チェック（ルールベース＝DATA）。「このまま投稿」/「AIでもっと強くする（改善版に差し替え）」を選択可能。実質同一コンテンツは予約自体をブロック） |
+| F-07 拡張 | **スレッド・画像付き予約**（スレッド（ツリー）投稿の予約＝2投稿目以降は返信として連鎖投稿、途中失敗は二重投稿を避けてエラーメモのみ。画像URL添付は投稿時にXへアップロード（最大4枚・5MBまで）） |
 
-### 完了：Phase 3 スライスA〜C
+### 完了：Phase 3 全スライス（A〜E）
 
 | 機能 | 内容 |
 |---|---|
@@ -116,10 +210,22 @@ X API は従量課金です。**必ず X Developer Console 側でも spending li
 | F-24 | **検索/フィルタ**（取得済み投稿の横断検索：キーワード・アカウント・いいね数・保存済み。DB内検索でAPIコスト0） |
 | F-08 | **競合発見エンジン＋COMPETITOR SCORE**（キーワード検索で同ジャンル発信者を発見→AIが0〜100で採点・理由付き→ワンクリックでベンチマーク追加。Follow Graph探索はコスト過大のため非実装） |
 | F-12 | **ポジショニング分析＋プロフィール生成**（登録済み競合を2軸マップに配置、空きポジション仮説、POSITIONING SCORE、名前欄/bio/固定ポスト/ヘッダーコピーの3案生成。DB内の公開プロフィールのみ使用でAPIコスト0） |
+| F-09 | **マーケティング戦略AI**（WHO/WHAT/WHY/HOW 設定ウィザード・CUSTOMER INSIGHT（本音9項目の仮説化。必ず「マーケティング仮説」表示）・MARKETING PLAYBOOK（原則別アドバイス＋リスト動線＋CUSTOMER JOURNEY）。投稿生成が常に参照し、投稿ごとにJOURNEY段階を指定可能） |
+| F-17 | **KNOWLEDGE BASE**（考え方・経験・失敗談・事例・商品情報の蓄積。生成時は競合投稿より本人の一次情報を優先参照。関連度はバイグラム一致で自動選択） |
+| F-18 | **CONTENT PILLARS・投稿比率設計**（発信テーマの柱（最大6本）と目標比率＋目的別比率（Reach/Authority/Trust/Education/Conversion）を設計。直近の自己投稿をキーワード一致で分類＝DATA扱い・AIコスト0でズレを可視化し、不足テーマから生成へワンクリック連携） |
+| F-13 | **競合マネタイズ動線分析＋FUNNEL MAP**（登録済み競合の公開情報（bio・URL・投稿内CTA）から収益タイプと導線を分析。「確認済み」と「推定」を必ず区別表示、収益額等の非公開情報は推測しない。「自分が転用するならこの動線」の提案付き。外部サイトのクロールはせずDB内データのみでX APIコスト0） |
 
-### 未実装（以降）
+### 完了：Phase 4 スライスA
 
-- テーマ別分析・コンテンツカレンダー（月表示）・画像/スレッド投稿・投稿前AIチェック・F-09 マーケティング戦略AI・F-13 動線分析・F-17 Knowledge Base・F-18 Content Pillars・Phase 4（AI CHAT・SaaS化等）は要件定義 §10 参照
+| 機能 | 内容 |
+|---|---|
+| F-22 | **AI CHAT**（蓄積データ＝自己実績・柱のズレ・ベンチマーク・戦略設定・予算を文脈に持つ対話AI。回答は §9 に従い DATA（実測）/ AI推定（仮説）/ NEXT ACTION を必ず区別して表示。文脈の組み立てはDB内データのみでX APIコスト0） |
+| F-23 | **AUTO CONTENT PLAN**（「今月N投稿」と指示すると柱の比率・戦略・実績のおすすめ時間帯からAIが月間投稿計画を設計し、カレンダーに「計画」として配置。各計画はワンクリックで生成スタジオへ。配置されるのはネタであり、本文生成・予約は必ずユーザー承認を経る＝完全自動投稿はしない） |
+
+### 未実装（対象外の確定事項を含む）
+
+- F-08 Follow Graph 探索（APIコスト・レート制限が重いため v1 では非実装と要件定義 §7 で決定済み）
+- マルチXアカウント・マルチテナント・料金プラン・決済・チーム管理（SaaS化。外部決済サービス等が前提のため未実装）
 
 ## 設計上の要点
 
@@ -160,9 +266,14 @@ X API と AI の呼び出しは、必ず `lib/x-api/` と `lib/ai/` のファサ
 | `npx tsx scripts/verify-phase2a.ts` | Phase 2 スライスAの受け入れ確認（IMPACT SCORE・一括分析・勝ちパターン・予測スコア） |
 | `npx tsx scripts/verify-phase2b.ts` | Phase 2 スライスBの受け入れ確認（HOOK/形式/時間帯分析・週次レポート） |
 | `npx tsx scripts/verify-phase2c.ts` | Phase 2 スライスCの受け入れ確認（Personal Growth Model 補正・CSV） |
+| `npx tsx scripts/verify-phase2d.ts` | Phase 2 積み残しスライスDの受け入れ確認（カレンダー・テーマ別分析） |
+| `npx tsx scripts/verify-phase2e.ts` | Phase 2 積み残しスライスEの受け入れ確認（投稿前AIチェック・スレッド/画像予約） |
 | `npx tsx scripts/verify-phase3a.ts` | Phase 3 スライスAの受け入れ確認（トレンド分析・検索） |
 | `npx tsx scripts/verify-phase3b.ts` | Phase 3 スライスBの受け入れ確認（競合発見・COMPETITOR SCORE） |
 | `npx tsx scripts/verify-phase3c.ts` | Phase 3 スライスCの受け入れ確認（ポジショニング・プロフィール3案） |
+| `npx tsx scripts/verify-phase3d.ts` | Phase 3 スライスDの受け入れ確認（マーケティング戦略AI・KNOWLEDGE BASE） |
+| `npx tsx scripts/verify-phase3e.ts` | Phase 3 スライスEの受け入れ確認（CONTENT PILLARS・動線分析） |
+| `npx tsx scripts/verify-phase4a.ts` | Phase 4 スライスAの受け入れ確認（AI CHAT・AUTO CONTENT PLAN） |
 | `npm run worker` | 予約投稿（30秒間隔）とメトリクススナップショット（5分間隔）のバックグラウンド処理 |
 
 ## 技術スタック

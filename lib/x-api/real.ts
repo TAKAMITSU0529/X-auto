@@ -271,13 +271,72 @@ export class RealXApiClient implements XApiClient {
   async createPost(args: {
     accessToken: string;
     text: string;
+    mediaIds?: string[];
+    replyToXPostId?: string;
   }): Promise<{ xPostId: string }> {
+    const body: Record<string, unknown> = { text: args.text };
+    if (args.mediaIds && args.mediaIds.length > 0) {
+      body.media = { media_ids: args.mediaIds };
+    }
+    if (args.replyToXPostId) {
+      body.reply = { in_reply_to_tweet_id: args.replyToXPostId };
+    }
+
     const result = await callXApi<{ data: { id: string } }>("/tweets", {
       token: args.accessToken,
       method: "POST",
-      body: { text: args.text },
+      body,
     });
     return { xPostId: result.data.id };
+  }
+
+  /**
+   * 画像URLをダウンロードして X にアップロードする (F-07 画像付き予約)。
+   * X API v2 の media/upload (multipart) を使う。画像は 5MB までを想定。
+   */
+  async uploadMediaFromUrl(args: {
+    accessToken: string;
+    url: string;
+  }): Promise<{ mediaId: string }> {
+    const imageResponse = await fetch(args.url, { cache: "no-store" });
+    if (!imageResponse.ok) {
+      throw new XApiError(
+        imageResponse.status,
+        `画像URLの取得に失敗しました (${imageResponse.status}): ${args.url}`,
+      );
+    }
+    const blob = await imageResponse.blob();
+    if (blob.size > 5 * 1024 * 1024) {
+      throw new XApiError(413, "画像が5MBを超えています。");
+    }
+
+    const form = new FormData();
+    form.set("media", blob);
+    form.set("media_category", "tweet_image");
+
+    const response = await fetch(`${API_BASE}/media/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${args.accessToken}` },
+      body: form,
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new XApiError(
+        response.status,
+        `メディアアップロードに失敗しました (${response.status}): ${detail.slice(0, 300)}`,
+      );
+    }
+
+    const result = (await response.json()) as {
+      data?: { id?: string };
+      media_id_string?: string;
+    };
+    const mediaId = result.data?.id ?? result.media_id_string;
+    if (!mediaId) {
+      throw new XApiError(500, "メディアIDが取得できませんでした。");
+    }
+    return { mediaId };
   }
 
   /**

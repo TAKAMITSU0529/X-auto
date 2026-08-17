@@ -1,10 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { positioningAction, type PositioningState } from "./actions";
-import { FormError } from "@/components/form";
-import { Card, HypothesisNote } from "@/components/ui";
+import { Field, FormError, SubmitButton } from "@/components/form";
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  HypothesisNote,
+  MeterBar,
+  NextActionButton,
+  Tag,
+} from "@/components/ui";
 
 const initialState: PositioningState = {
   error: null,
@@ -20,23 +27,33 @@ export function PositioningForm() {
   return (
     <div className="space-y-6">
       <Card>
+        <CardHeader
+          title="ジャンルを指定して分析する"
+          description="登録済みの競合の公開プロフィールを分析対象にします。ジャンルは競合と読者を絞り込むために使われます。"
+        />
         <form action={formAction} className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[240px] flex-1">
-            <span className="mb-1.5 block text-sm font-medium text-ink-700">
-              ジャンル
-            </span>
-            <input
+          <div className="min-w-[240px] flex-1">
+            <Field
+              label="ジャンル"
               name="genre"
               required
               placeholder="例：AI業務改善"
-              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
-          </label>
-          <PositioningSubmit />
+          </div>
+          <div className="shrink-0">
+            <SubmitButton
+              fullWidth={false}
+              pendingLabel="分析中...（数十秒かかることがあります）"
+            >
+              ポジショニングを分析
+            </SubmitButton>
+          </div>
         </form>
-        <div className="mt-2">
-          <FormError message={state.error} />
-        </div>
+        {state.error ? (
+          <div className="mt-3">
+            <FormError message={state.error} />
+          </div>
+        ) : null}
       </Card>
 
       {result ? (
@@ -48,74 +65,101 @@ export function PositioningForm() {
 
           {/* COMPETITOR MAP */}
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink-900">
-              COMPETITOR MAP
-            </h2>
-            <p className="mb-4 text-xs text-ink-500">
-              横軸: {result.axes.x.label}（{result.axes.x.low} ←→{" "}
-              {result.axes.x.high}） / 縦軸: {result.axes.y.label}（
-              {result.axes.y.low} ←→ {result.axes.y.high}）
-            </p>
+            <CardHeader
+              title="COMPETITOR MAP"
+              description={`横軸: ${result.axes.x.label}（${result.axes.x.low} ←→ ${result.axes.x.high}） / 縦軸: ${result.axes.y.label}（${result.axes.y.low} ←→ ${result.axes.y.high}）`}
+              action={
+                <NextActionButton href="/strategy">
+                  この立ち位置で戦略を設計する
+                </NextActionButton>
+              }
+            />
 
-            <div className="relative mx-auto h-96 max-w-2xl rounded-xl border border-ink-200 bg-ink-50">
-              {/* 軸 */}
-              <div className="absolute left-0 top-1/2 h-px w-full bg-ink-300" />
-              <div className="absolute left-1/2 top-0 h-full w-px bg-ink-300" />
-              <span className="absolute left-2 top-1/2 -translate-y-5 text-[10px] text-ink-400">
-                {result.axes.x.low}
+            {/* 凡例 (色だけに頼らずラベルでも区別する) */}
+            <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] text-ink-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-ink-400" />
+                登録済みの競合
               </span>
-              <span className="absolute right-2 top-1/2 -translate-y-5 text-[10px] text-ink-400">
-                {result.axes.x.high}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full border-2 border-white bg-brand-600 shadow-xs" />
+                あなたの推奨ポジション
               </span>
-              <span className="absolute left-1/2 top-2 ml-1 text-[10px] text-ink-400">
-                {result.axes.y.high}
-              </span>
-              <span className="absolute bottom-2 left-1/2 ml-1 text-[10px] text-ink-400">
-                {result.axes.y.low}
-              </span>
+              <Tag tone="hypothesis">AI推定</Tag>
+            </div>
 
-              {/* 競合 */}
-              {result.placements.map((p) => (
+            <div className="mx-auto max-w-2xl">
+              <div className="relative aspect-square w-full rounded-card border border-ink-200 bg-ink-25">
+                {/* 4分割の補助線 */}
+                <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                  <span className="border-b border-r border-dashed border-ink-200" />
+                  <span className="border-b border-dashed border-ink-200" />
+                  <span className="border-r border-dashed border-ink-200" />
+                  <span />
+                </div>
+
+                {/* 軸 */}
+                <div className="absolute left-0 top-1/2 h-px w-full bg-ink-300" />
+                <div className="absolute left-1/2 top-0 h-full w-px bg-ink-300" />
+
+                {/* 軸ラベル */}
+                <span className="absolute left-2 top-1/2 -translate-y-4 rounded bg-ink-25/90 px-1 text-[10px] font-medium text-ink-500">
+                  {result.axes.x.low}
+                </span>
+                <span className="absolute right-2 top-1/2 -translate-y-4 rounded bg-ink-25/90 px-1 text-[10px] font-medium text-ink-500">
+                  {result.axes.x.high}
+                </span>
+                <span className="absolute left-1/2 top-2 ml-1.5 rounded bg-ink-25/90 px-1 text-[10px] font-medium text-ink-500">
+                  {result.axes.y.high}
+                </span>
+                <span className="absolute bottom-2 left-1/2 ml-1.5 rounded bg-ink-25/90 px-1 text-[10px] font-medium text-ink-500">
+                  {result.axes.y.low}
+                </span>
+
+                {/* 競合 */}
+                {result.placements.map((p) => (
+                  <div
+                    key={p.handle}
+                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                    style={{
+                      left: `${50 + clamp(p.x) * 44}%`,
+                      top: `${50 - clamp(p.y) * 44}%`,
+                    }}
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full bg-ink-400 ring-2 ring-white" />
+                    <span className="mt-1 max-w-28 truncate rounded bg-white/85 px-1 text-[10px] leading-tight text-ink-600">
+                      @{p.handle}
+                    </span>
+                  </div>
+                ))}
+
+                {/* 推奨ポジション */}
                 <div
-                  key={p.handle}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                   style={{
-                    left: `${50 + clamp(p.x) * 44}%`,
-                    top: `${50 - clamp(p.y) * 44}%`,
+                    left: `${50 + clamp(result.recommendedPosition.x) * 44}%`,
+                    top: `${50 - clamp(result.recommendedPosition.y) * 44}%`,
                   }}
                 >
-                  <div className="h-2.5 w-2.5 rounded-full bg-ink-400" />
-                  <span className="mt-0.5 block max-w-24 truncate text-[10px] text-ink-500">
-                    @{p.handle}
+                  <span className="h-4 w-4 rounded-full border-2 border-white bg-brand-600 shadow-md" />
+                  <span className="mt-1 whitespace-nowrap rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                    あなた: {result.recommendedPosition.label}
                   </span>
                 </div>
-              ))}
-
-              {/* 推奨ポジション */}
-              <div
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  left: `${50 + clamp(result.recommendedPosition.x) * 44}%`,
-                  top: `${50 - clamp(result.recommendedPosition.y) * 44}%`,
-                }}
-              >
-                <div className="h-4 w-4 animate-pulse rounded-full border-2 border-white bg-brand-600 shadow" />
-                <span className="mt-0.5 block whitespace-nowrap rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  あなた: {result.recommendedPosition.label}
-                </span>
               </div>
             </div>
 
-            <p className="mt-4 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
-              {result.recommendation}
-            </p>
+            <div className="mt-4">
+              <HypothesisNote>{result.recommendation}</HypothesisNote>
+            </div>
           </Card>
 
           {/* POSITIONING SCORE */}
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-ink-900">
-              POSITIONING SCORE — 候補の採点
-            </h2>
+            <CardHeader
+              title="POSITIONING SCORE — 候補の採点"
+              description="競合密度・需要・差別化・実績・専門性・マネタイズ・継続性の観点をAIが総合したスコアです。"
+            />
             <ul className="space-y-3">
               {result.candidates
                 .slice()
@@ -123,28 +167,41 @@ export function PositioningForm() {
                 .map((candidate) => (
                   <li
                     key={candidate.name}
-                    className="flex items-start gap-3 rounded-lg border border-ink-200 p-3"
+                    className="rounded-xl border border-ink-200 p-3.5"
                   >
-                    <span
-                      className={`shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums ${
-                        candidate.score >= 75
-                          ? "bg-emerald-100 text-emerald-800"
-                          : candidate.score >= 55
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-ink-100 text-ink-600"
-                      }`}
-                    >
-                      {candidate.score}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-ink-900">
-                        {candidate.name}
-                      </p>
-                      <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-ink-600">
-                        {candidate.reasons.map((reason, i) => (
-                          <li key={i}>{reason}</li>
-                        ))}
-                      </ul>
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-lg border text-[15px] font-bold tabular-nums ${
+                          candidate.score >= 75
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : candidate.score >= 55
+                              ? "border-amber-200 bg-amber-50 text-amber-800"
+                              : "border-ink-200 bg-ink-50 text-ink-600"
+                        }`}
+                      >
+                        {candidate.score}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-ink-900">
+                          {candidate.name}
+                        </p>
+                        <MeterBar
+                          className="mt-2"
+                          ratio={candidate.score / 100}
+                          tone={
+                            candidate.score >= 75
+                              ? "emerald"
+                              : candidate.score >= 55
+                                ? "amber"
+                                : "ink"
+                          }
+                        />
+                        <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs leading-relaxed text-ink-600">
+                          {candidate.reasons.map((reason, i) => (
+                            <li key={i}>{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -153,20 +210,24 @@ export function PositioningForm() {
 
           {/* PROFILE GENERATOR */}
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink-900">
-              プロフィール3案
-            </h2>
-            <p className="mb-4 text-xs text-ink-500">
-              推奨ポジションに基づく名前欄・bio・固定ポスト・ヘッダーコピー。コピーしてXのプロフィールに貼り付けてください。
-            </p>
-            <div className="grid gap-4 lg:grid-cols-3">
+            <CardHeader
+              title="プロフィール3案"
+              description="推奨ポジションに基づく名前欄・bio・固定ポスト・ヘッダーコピー。コピーしてXのプロフィールに貼り付けてください。"
+              action={
+                <NextActionButton href="/brand">
+                  MY BRAND に反映する
+                </NextActionButton>
+              }
+            />
+            <div className="grid gap-4 lg:grid-cols-3 items-start">
               {result.profiles.map((profile) => (
                 <div
                   key={profile.title}
-                  className="flex flex-col rounded-xl border border-ink-200 p-4"
+                  className="flex flex-col rounded-xl border border-ink-200 bg-ink-25 p-4"
                 >
-                  <p className="mb-2 text-xs font-bold text-brand-700">
+                  <p className="mb-3 flex items-center gap-2 text-xs font-bold text-brand-700">
                     {profile.title}
+                    <Tag tone="hypothesis">AI推定</Tag>
                   </p>
                   <ProfileField label="名前欄" value={profile.name} />
                   <ProfileField label="bio" value={profile.bio} />
@@ -180,7 +241,12 @@ export function PositioningForm() {
             </div>
           </Card>
         </>
-      ) : null}
+      ) : (
+        <EmptyState
+          title="まだ分析していません"
+          description="ジャンルを入力して「ポジショニングを分析」を押すと、登録済み競合を2軸にマッピングし、空いている立ち位置とプロフィール3案を提案します。競合がまだ少ない場合は、先に競合発見で候補を追加してください。"
+        />
+      )}
     </div>
   );
 }
@@ -191,26 +257,13 @@ function clamp(n: number): number {
 
 function ProfileField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-3">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-400">
+    <div className="mb-3 last:mb-0">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-400">
         {label}
       </p>
-      <p className="whitespace-pre-wrap rounded-lg bg-ink-50 px-2.5 py-2 text-xs leading-relaxed text-ink-800">
+      <p className="whitespace-pre-wrap rounded-lg border border-ink-100 bg-white px-2.5 py-2 text-xs leading-relaxed text-ink-800">
         {value}
       </p>
     </div>
-  );
-}
-
-function PositioningSubmit() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "分析中...（数十秒かかることがあります）" : "ポジショニングを分析"}
-    </button>
   );
 }

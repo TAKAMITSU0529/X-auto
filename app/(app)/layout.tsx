@@ -1,27 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserId, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getBudgetStatus } from "@/lib/usage/guard";
 import { isMockMode } from "@/lib/x-api";
 import { isAiMockMode } from "@/lib/ai";
-import { NavLink } from "@/components/nav-link";
-
-const NAV = [
-  { href: "/dashboard", label: "ダッシュボード" },
-  { href: "/benchmarks", label: "ベンチマーク" },
-  { href: "/competitors", label: "競合発見" },
-  { href: "/positioning", label: "ポジショニング" },
-  { href: "/research", label: "リサーチ" },
-  { href: "/trends", label: "トレンド" },
-  { href: "/search", label: "検索" },
-  { href: "/library", label: "ライブラリ" },
-  { href: "/generate", label: "生成スタジオ" },
-  { href: "/schedule", label: "予約投稿" },
-  { href: "/analytics", label: "自己分析" },
-  { href: "/brand", label: "MY BRAND" },
-  { href: "/settings", label: "設定" },
-];
+import { Sidebar } from "@/components/sidebar";
+import { IconAlert, IconLogout, IconSparkle } from "@/components/icons";
 
 export default async function AppLayout({
   children,
@@ -37,82 +21,145 @@ export default async function AppLayout({
   ]);
 
   const mockActive = isMockMode() || isAiMockMode();
+  const meterRatio = Math.min(1, Math.max(0, budget.usageRatio));
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ink-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
-          <Link href="/dashboard" className="text-lg font-bold text-ink-900">
-            X AUTO
-          </Link>
+      <Sidebar
+        footer={
+          <div className="space-y-3">
+            {/* API利用状況 (F-25)。常に視界に入る位置に置いてコスト意識を保つ */}
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+                  今月のAPI利用
+                </span>
+                <span className="text-[11px] font-semibold tabular-nums text-ink-300">
+                  ${budget.spentUsd.toFixed(2)}
+                  <span className="text-ink-500">
+                    {" "}
+                    / ${budget.limitUsd.toFixed(0)}
+                  </span>
+                </span>
+              </div>
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    budget.isExceeded
+                      ? "bg-rose-400"
+                      : budget.isWarning
+                        ? "bg-amber-400"
+                        : "bg-brand-400"
+                  }`}
+                  style={{ width: `${Math.max(2, meterRatio * 100)}%` }}
+                />
+              </div>
+            </div>
 
-          <nav className="flex flex-1 items-center gap-1">
-            {NAV.map((item) => (
-              <NavLink key={item.href} href={item.href}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-ink-500">{user?.name ?? user?.email}</span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/login" });
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:bg-ink-50"
+            <div className="flex items-center gap-2 px-1">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ink-600 to-ink-800 text-[11px] font-semibold text-white">
+                {(user?.name ?? user?.email ?? "?").slice(0, 1).toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12px] font-medium text-ink-200">
+                  {user?.name ?? "ユーザー"}
+                </span>
+                <span className="block truncate text-[10px] text-ink-500">
+                  {user?.email}
+                </span>
+              </span>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/login" });
+                }}
               >
-                ログアウト
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  title="ログアウト"
+                  aria-label="ログアウト"
+                  className="rounded-lg p-2 text-ink-500 transition hover:bg-white/10 hover:text-white"
+                >
+                  <IconLogout className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      </header>
+        }
+      />
 
-      {mockActive ? (
-        <div className="border-b border-amber-200 bg-amber-50">
-          <div className="mx-auto max-w-7xl px-6 py-2 text-xs text-amber-800">
-            <strong className="font-semibold">モックモード動作中</strong>
-            {" — "}
-            {isMockMode() ? "X API" : null}
-            {isMockMode() && isAiMockMode() ? " と " : null}
-            {isAiMockMode() ? "AI" : null}
-            {" は実際には呼び出されず、サンプルデータを表示しています。"}
-            <code className="ml-1 rounded bg-amber-100 px-1">.env</code>
-            {" の X_API_MODE / AI_MODE を real にすると実データに切り替わります。"}
+      <div className="lg:pl-[264px]">
+        {mockActive || budget.isWarning ? (
+          <div className="space-y-px">
+            {mockActive ? (
+              <Banner tone="info" icon={<IconSparkle className="h-4 w-4" />}>
+                <strong className="font-semibold">モックモード動作中</strong>
+                {" — "}
+                {isMockMode() ? "X API" : null}
+                {isMockMode() && isAiMockMode() ? " と " : null}
+                {isAiMockMode() ? "AI" : null}
+                {" は実際には呼び出されず、サンプルデータを表示しています。"}
+                <code className="ml-1 rounded bg-black/[0.06] px-1.5 py-0.5 text-[11px]">
+                  .env
+                </code>
+                {" の X_API_MODE / AI_MODE を real にすると実データに切り替わります。"}
+              </Banner>
+            ) : null}
+
+            {budget.isWarning ? (
+              <Banner
+                tone={budget.isExceeded ? "danger" : "warning"}
+                icon={<IconAlert className="h-4 w-4" />}
+              >
+                {budget.isExceeded ? (
+                  <>
+                    <strong className="font-semibold">
+                      API利用上限に到達しました
+                    </strong>
+                    {` — 今月 $${budget.spentUsd.toFixed(2)} / 上限 $${budget.limitUsd.toFixed(2)}。取得系の機能は停止しています。`}
+                  </>
+                ) : (
+                  <>
+                    <strong className="font-semibold">
+                      API利用が警告ラインを超えました
+                    </strong>
+                    {` — 今月 $${budget.spentUsd.toFixed(2)} / 上限 $${budget.limitUsd.toFixed(2)}`}
+                  </>
+                )}
+              </Banner>
+            ) : null}
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {budget.isWarning ? (
-        <div
-          className={`border-b ${
-            budget.isExceeded
-              ? "border-red-200 bg-red-50 text-red-800"
-              : "border-orange-200 bg-orange-50 text-orange-800"
-          }`}
-        >
-          <div className="mx-auto max-w-7xl px-6 py-2 text-xs">
-            {budget.isExceeded ? (
-              <>
-                <strong className="font-semibold">API利用上限に到達しました</strong>
-                {` — 今月 $${budget.spentUsd.toFixed(2)} / 上限 $${budget.limitUsd.toFixed(2)}。取得系の機能は停止しています。`}
-              </>
-            ) : (
-              <>
-                <strong className="font-semibold">API利用が警告ラインを超えました</strong>
-                {` — 今月 $${budget.spentUsd.toFixed(2)} / 上限 $${budget.limitUsd.toFixed(2)}`}
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
+        <main className="mx-auto max-w-[1400px] px-5 py-8 lg:px-10 lg:py-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
 
-      <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+function Banner({
+  tone,
+  icon,
+  children,
+}: {
+  tone: "info" | "warning" | "danger";
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const styles = {
+    info: "border-brand-100 bg-brand-50/70 text-brand-900",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    danger: "border-rose-200 bg-rose-50 text-rose-900",
+  }[tone];
+
+  return (
+    <div className={`border-b ${styles}`}>
+      <div className="mx-auto flex max-w-[1400px] items-start gap-2 px-5 py-2.5 text-[12px] leading-relaxed lg:px-10">
+        <span className="mt-px shrink-0 opacity-70">{icon}</span>
+        <p>{children}</p>
+      </div>
     </div>
   );
 }

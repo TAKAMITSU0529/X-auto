@@ -1,7 +1,14 @@
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -337,6 +344,363 @@ export class MockAiProvider implements AiProvider {
           headerCopy: "失敗から始まった、定着する導入の話。",
         },
       ],
+    };
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    const who = (input.who ?? {}) as { industry?: string; problems?: string };
+    const target = who.industry || "ターゲット";
+
+    return {
+      surfaceProblem:
+        who.problems || `（モック）${target}は「AIを使いこなせていない」と感じている`,
+      realProblem:
+        "（モック）ツールの問題ではなく、業務のどこをやめて何を残すかを決められていないこと",
+      emotions: ["焦り", "取り残される不安", "半信半疑"],
+      fearedFuture:
+        "競合だけが効率化に成功し、自社は人手不足のまま値上げもできず消耗していく未来",
+      desiredFuture:
+        "少ない人数でも回る体制ができ、自分は本来やりたい仕事に時間を使えている未来",
+      whyNotAct:
+        "何から始めるのが正解か分からず、失敗して社内の信用を失うのが怖いから",
+      whyNotBuy:
+        "過去にツール導入で失敗した経験があり、また「導入して終わり」になると思っているから",
+      believedNorm: "AI活用は大企業やITに強い会社がやるものだという常識",
+      normToBreak:
+        "「まず全社導入」ではなく「1部署で小さく回して広げる」方が定着するという新常識",
+    };
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    void input;
+    return {
+      advices: [
+        {
+          area: "ターゲット市場",
+          advice:
+            "（モック）「AIに興味がある人全員」ではなく、過去にツール導入で失敗した経験を持つ層に絞ると刺さりやすい",
+          action: "bioと固定ポストを「導入失敗経験者向け」の言葉に書き換える",
+        },
+        {
+          area: "USP",
+          advice:
+            "（モック）ツール紹介ではなく「定着させる手順」を独自資産として前面に出す",
+          action: "定着手順を1枚にまとめた無料資料を作り、固定ポストから配布する",
+        },
+        {
+          area: "リスクリバーサル",
+          advice:
+            "（モック）「失敗したらどうしよう」という不安を先に除去する。無料診断・返金条件・小さく始めるプランが有効",
+          action: "無料相談の案内に「合わなければ導入を止める判断もお手伝いします」と明記する",
+        },
+        {
+          area: "LTV・継続",
+          advice:
+            "（モック）導入支援で終わらせず、定着レビューの月次契約への動線を設計する",
+          action: "支援終了1ヶ月後のフォロー面談をパッケージに含める",
+        },
+        {
+          area: "オファー・CTA",
+          advice:
+            "（モック）投稿ごとにCTAを分ける。教育投稿では資料DL、実績投稿では無料相談に誘導する",
+          action: "今週の投稿予定に対しCTAを1つずつ割り当てる",
+        },
+      ],
+      funnel: {
+        steps: [
+          { label: "X投稿", description: "実例と数字で認知を取る" },
+          { label: "プロフィール", description: "USPと無料資料への導線を明記" },
+          { label: "無料資料DL", description: "定着手順書でリスト化する" },
+          { label: "メール/LINE教育", description: "事例配信で信頼を積む" },
+          { label: "無料相談", description: "不安の除去と個別診断" },
+          { label: "導入支援契約", description: "本命商品への転換" },
+        ],
+        note: "（モック）リスト化を挟むことで、Xのアルゴリズム変動に依存しない資産動線になります",
+      },
+      journey: [
+        { stage: "認知", goal: "存在を知ってもらう", postHint: "実数公開・逆張り・失敗談のフックで新規リーチを取る" },
+        { stage: "興味", goal: "続きが気になる状態にする", postHint: "How-Toや事例の連載で繰り返し接触する" },
+        { stage: "信頼", goal: "この人は本物だと感じてもらう", postHint: "顧客事例・数字付き実績・失敗からの学びを出す" },
+        { stage: "比較", goal: "他の選択肢との違いを示す", postHint: "「ツール導入」と「定着支援」の違いを言語化する" },
+        { stage: "相談", goal: "無料相談へ一歩踏み出させる", postHint: "相談で得られるものと所要時間を具体的に示す" },
+        { stage: "購入", goal: "導入を決断してもらう", postHint: "募集投稿は頻度を絞り、締切と定員を明確にする" },
+      ],
+    };
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    const competitors = input.competitors.map((c) => {
+      // 公開情報 (bio・URL・投稿) の内容から決定的に分類する
+      const school = /講座|スクール|受講|セミナー/.test(c.bio);
+      const consult = /支援|コンサル|顧問|導入/.test(c.bio);
+      const community = /コミュニティ|サロン/.test(c.bio);
+      const monetizationType = school
+        ? "講座・スクール"
+        : consult
+          ? "コンサル・導入支援"
+          : community
+            ? "コミュニティ"
+            : "コンテンツ販売";
+
+      const confirmedFacts: string[] = [];
+      if (c.url) confirmedFacts.push(`プロフィールにURLを設置 (${c.url})`);
+      if (school) confirmedFacts.push("bio に講座・セミナーへの言及がある");
+      if (consult) confirmedFacts.push("bio に支援・コンサルティングの記載がある");
+      if (c.ctaPosts.length > 0)
+        confirmedFacts.push(`投稿内に誘導 (CTA) を含む投稿が ${c.ctaPosts.length} 件ある`);
+      if (confirmedFacts.length === 0)
+        confirmedFacts.push("公開プロフィールからは明確な商用導線を確認できない");
+
+      return {
+        handle: c.handle,
+        monetizationType,
+        confirmedFacts,
+        estimated: [
+          `（モック）${monetizationType}を本命商品として、無料コンテンツでリスト化してから案内する二段構えと推定`,
+          "募集は常時ではなく、教育投稿を挟んで期間限定で行うパターンと推定",
+        ],
+        funnelSteps: [
+          { label: "X投稿 (認知)", basis: "confirmed" as const },
+          { label: "プロフィール", basis: "confirmed" as const },
+          ...(c.url
+            ? [{ label: "外部リンク (リスト化)", basis: "confirmed" as const }]
+            : [{ label: "リスト化 (LINE/メルマガ)", basis: "estimated" as const }]),
+          { label: "教育コンテンツ", basis: "estimated" as const },
+          { label: monetizationType, basis: school || consult ? ("confirmed" as const) : ("estimated" as const) },
+        ],
+      };
+    });
+
+    return {
+      competitors,
+      adaptation: {
+        steps: [
+          "X投稿: 導入実例と数字で認知を取る",
+          "プロフィール: 無料の定着手順書へ誘導",
+          "資料DL: メールアドレスでリスト化",
+          "メール教育: 事例を週1配信",
+          "無料相談: 不安の除去",
+          "導入支援契約",
+        ],
+        reason:
+          "（モック）競合の多くは講座への直行動線ですが、あなたの強み（支援実績）は個別相談と相性が良いため、資料→相談を挟む動線が転用に適しています。",
+      },
+    };
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    const text = input.text;
+    const firstLine = (text.split("\n").find((l) => l.trim()) ?? "").trim();
+
+    // 入力テキストから決定的にそれらしい判定を作る
+    const hasNumbers = /\d/.test(text);
+    const hasCta = /プロフ|固定|リンク|リプ|フォロー|相談|資料|DM/.test(text);
+    const riskWords = text.match(/絶対|100%|誰でも簡単|爆益|確実に稼げ/g) ?? [];
+    const tooLong = text.length > 400;
+    const redundant = /(という|こと|ような)を?(という|こと|ような)/.test(text);
+
+    const items = [
+      {
+        key: "readability",
+        label: "読みやすさ",
+        ok: !tooLong,
+        comment: tooLong
+          ? "400文字を超えています。改行と削減で読み切れる長さにしましょう"
+          : "適切な長さと改行です",
+      },
+      {
+        key: "typos",
+        label: "誤字・脱字",
+        ok: true,
+        comment: "明らかな誤字は見つかりませんでした（モック判定）",
+      },
+      {
+        key: "hook",
+        label: "書き出し (HOOK)",
+        ok: firstLine.length <= 30 && firstLine.length > 0,
+        comment:
+          firstLine.length > 30
+            ? "冒頭が長めです。最初の1文を短く切ると続きが読まれやすくなります"
+            : "冒頭で目を引ける長さです",
+      },
+      {
+        key: "redundancy",
+        label: "冗長性",
+        ok: !redundant,
+        comment: redundant
+          ? "同じ表現の繰り返しがあります。1つに絞りましょう"
+          : "冗長な繰り返しはありません",
+      },
+      {
+        key: "targetFit",
+        label: "ターゲット適合",
+        ok: Boolean(input.strategy),
+        comment: input.strategy
+          ? "マーケティング戦略のターゲット設定と大きな矛盾はありません"
+          : "マーケティング戦略が未設定のため確認できません。戦略ページで設定してください",
+      },
+      {
+        key: "brandFit",
+        label: "ブランド適合",
+        ok: Boolean(input.brand),
+        comment: input.brand
+          ? "MY BRAND のトーン・禁止事項と矛盾しません"
+          : "MY BRAND が未設定のため確認できません",
+      },
+      {
+        key: "cta",
+        label: "CTA",
+        ok: hasCta,
+        comment: hasCta
+          ? "行動誘導が含まれています"
+          : "行動誘導がありません。目的（認知/教育/販売）によっては無しでも構いません",
+      },
+      {
+        key: "risk",
+        label: "リスク表現",
+        ok: riskWords.length === 0,
+        comment:
+          riskWords.length > 0
+            ? `誇張・断定表現が含まれています: ${[...new Set(riskWords)].join("、")}。実績ベースの表現に置き換えてください`
+            : "誇張・断定などのリスク表現はありません",
+      },
+    ];
+
+    const ngCount = items.filter((i) => !i.ok).length;
+    const improvedText = hasNumbers
+      ? `${firstLine}\n\n${text.slice(firstLine.length).trim()}\n\n詳しくはプロフィールから。`.trim()
+      : `${firstLine}\n\n${text.slice(firstLine.length).trim()}\n\n（実際の数字を1つ入れるとさらに強くなります）`.trim();
+
+    return {
+      items,
+      verdict: ngCount === 0 ? "ok" : "caution",
+      summary:
+        ngCount === 0
+          ? "（モック）大きな問題は見つかりませんでした。このまま投稿できます。"
+          : `（モック）${ngCount}項目に改善余地があります。右の改善版も検討してください。`,
+      improvedText,
+      improvementNote:
+        "（モック）冒頭を1文で切り、CTAを明示しました。数字の追加も検討してください。",
+    };
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    const ctx = (input.context ?? {}) as {
+      ownPostCount?: number;
+      avgEngagementRate?: number;
+      bestHook?: string | null;
+      bestSlot?: string | null;
+      lackingPillar?: string | null;
+    };
+
+    const dataPoints: string[] = [];
+    if (typeof ctx.ownPostCount === "number") {
+      dataPoints.push(`投稿実績: ${ctx.ownPostCount}件`);
+    }
+    if (typeof ctx.avgEngagementRate === "number") {
+      dataPoints.push(
+        `平均エンゲージメント率: ${(ctx.avgEngagementRate * 100).toFixed(2)}%`,
+      );
+    }
+    if (ctx.bestHook) dataPoints.push(`最も反応が高い書き出し: ${ctx.bestHook}`);
+    if (ctx.bestSlot) dataPoints.push(`最も成績の良い時間帯: ${ctx.bestSlot}`);
+
+    return {
+      answer: `（モック）「${input.question}」への回答です。あなたの実測データでは${
+        ctx.bestHook ? `「${ctx.bestHook}」の書き出し` : "具体的な数字を含む投稿"
+      }が伸びており、まずはそこを強化するのが近道です。`,
+      dataPoints:
+        dataPoints.length > 0 ? dataPoints : ["実測データがまだ少ない状態です"],
+      hypotheses: [
+        "実例と数字を含む投稿はターゲットの意思決定者に刺さりやすいと推定されます",
+        ctx.lackingPillar
+          ? `「${ctx.lackingPillar}」テーマの発信量を増やすと設計比率に近づきます`
+          : "テーマの偏りを減らすと新規リーチが安定すると推定されます",
+      ],
+      nextActions: [
+        ctx.bestSlot
+          ? `${ctx.bestSlot}に次の投稿を予約してください`
+          : "今週3件の投稿を予約してください",
+        "外れ値上位の投稿を1件選び「この型で作る」で生成してください",
+      ],
+    };
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    const ctx = (input.context ?? {}) as {
+      pillars?: { name: string; ratio: number }[];
+      bestTime?: string | null;
+    };
+    const pillars =
+      ctx.pillars && ctx.pillars.length > 0
+        ? ctx.pillars
+        : [{ name: "AI活用", ratio: 100 }];
+    const purposes = ["Reach", "Authority", "Trust", "Education", "Conversion"];
+    const time = ctx.bestTime ?? "19:00";
+
+    // 期間内に等間隔で配置する
+    const start = new Date(`${input.startDate}T00:00:00Z`);
+    const end = new Date(`${input.endDate}T00:00:00Z`);
+    const totalDays = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 86400000),
+    );
+    const step = Math.max(1, Math.floor(totalDays / input.count));
+
+    const items = Array.from({ length: input.count }, (_, i) => {
+      const d = new Date(start.getTime());
+      d.setUTCDate(d.getUTCDate() + Math.min(totalDays - 1, i * step));
+      const pillar = pillars[i % pillars.length];
+      const purpose = purposes[i % purposes.length];
+      return {
+        date: d.toISOString().slice(0, 10),
+        time,
+        pillar: pillar.name,
+        purpose,
+        title: `（モック）${pillar.name}のネタ ${Math.floor(i / pillars.length) + 1}`,
+        angle: `${pillar.name}について、${
+          purpose === "Reach"
+            ? "意外な事実のフックで新規向けに"
+            : purpose === "Conversion"
+              ? "事例と一緒に商品への導線を添えて"
+              : "実例と数字を根拠に"
+        }発信する`,
+      };
+    });
+
+    return {
+      items,
+      note: `（モック）${input.startDate}〜${input.endDate} に ${input.count} 件を、柱の比率と目的 (Reach/Authority/Trust/Education/Conversion) を循環させて配置しました。`,
     };
   }
 }

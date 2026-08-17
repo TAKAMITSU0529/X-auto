@@ -7,7 +7,14 @@ import {
   generateWeeklyReportAction,
   type WeeklyReportState,
 } from "./report-actions";
-import { FormError } from "@/components/form";
+import { FormError, Spinner } from "@/components/form";
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  HypothesisNote,
+  Tag,
+} from "@/components/ui";
 
 const initialState: WeeklyReportState = { error: null, report: null };
 
@@ -31,42 +38,40 @@ export function WeeklyReportSection({
   const report = state.report ?? latest?.report ?? null;
 
   return (
-    <div className="rounded-xl border border-ink-200 bg-white p-5 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-ink-900">
-          AI GROWTH COACH — 週次レポート
-        </h2>
-        <form action={formAction}>
-          <ReportSubmit hasReport={Boolean(report)} />
-        </form>
-      </div>
+    <Card>
+      <CardHeader
+        title="AI GROWTH COACH — 週次レポート"
+        description="直近7日の実測値をもとに、AIが総括と次の一手を出します。"
+        action={
+          <form action={formAction}>
+            <ReportSubmit hasReport={Boolean(report)} />
+          </form>
+        }
+      />
 
       <FormError message={state.error} />
 
       {!report ? (
-        <p className="py-6 text-center text-sm text-ink-500">
-          まだレポートがありません。「レポートを生成」を押すと、直近7日の実績から総括と次のアクションを生成します。
-        </p>
+        <EmptyState
+          title="まだレポートがありません"
+          description="「レポートを生成」を押すと、直近7日の実績から総括と次のアクションを生成します。"
+        />
       ) : (
         <div className="space-y-4">
-          <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5">
-            <span className="mr-2 rounded bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
-              AI推定
-            </span>
-            <span className="text-sm text-violet-900">{report.summary}</span>
-          </div>
+          <HypothesisNote>{report.summary}</HypothesisNote>
 
-          <div className="grid gap-4 sm:grid-cols-3 text-sm">
+          <div className="grid gap-4 sm:grid-cols-3">
             <ReportList title="ハイライト" items={report.highlights} tone="ink" />
             <ReportList title="来週増やす" items={report.increase} tone="emerald" />
-            <ReportList title="減らす" items={report.decrease} tone="red" />
+            <ReportList title="減らす" items={report.decrease} tone="rose" />
           </div>
 
-          <div className="rounded-lg border border-brand-100 bg-brand-50 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-700">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+            <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-800">
+              <Tag tone="action">ACTION</Tag>
               NEXT BEST ACTION — 次にやること
             </p>
-            <ol className="list-inside list-decimal space-y-1.5 text-sm text-ink-800">
+            <ol className="list-inside list-decimal space-y-1.5 text-[13px] leading-relaxed text-emerald-900">
               {report.nextActions.map((action, i) => (
                 <li key={i}>{action}</li>
               ))}
@@ -74,13 +79,13 @@ export function WeeklyReportSection({
           </div>
 
           {latest && !state.report ? (
-            <p className="text-xs text-ink-400">
+            <p className="text-xs tabular-nums text-ink-400">
               生成日時: {new Date(latest.createdAt).toLocaleString("ja-JP")}
             </p>
           ) : null}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -91,20 +96,30 @@ function ReportList({
 }: {
   title: string;
   items: string[];
-  tone: "ink" | "emerald" | "red";
+  tone: "ink" | "emerald" | "rose";
 }) {
-  const toneClass =
-    tone === "emerald"
-      ? "text-emerald-700"
-      : tone === "red"
-        ? "text-red-700"
-        : "text-ink-700";
+  const toneClass = {
+    ink: "text-ink-600",
+    emerald: "text-emerald-700",
+    rose: "text-rose-700",
+  }[tone];
+
   return (
-    <div>
-      <p className={`mb-1.5 text-xs font-semibold ${toneClass}`}>{title}</p>
-      <ul className="list-inside list-disc space-y-1 text-xs text-ink-700">
+    <div className="rounded-xl border border-ink-200 bg-ink-25 p-3.5">
+      <p
+        className={`mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] ${toneClass}`}
+      >
+        {title}
+      </p>
+      <ul className="space-y-1.5 text-xs leading-relaxed text-ink-700">
         {items.map((item, i) => (
-          <li key={i}>{item}</li>
+          <li key={i} className="flex gap-1.5">
+            <span
+              aria-hidden="true"
+              className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-ink-300"
+            />
+            {item}
+          </li>
         ))}
       </ul>
     </div>
@@ -117,13 +132,18 @@ function ReportSubmit({ hasReport }: { hasReport: boolean }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg border border-violet-300 bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-800 transition hover:bg-violet-200 disabled:opacity-60"
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-xs transition duration-200 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {pending
-        ? "生成中..."
-        : hasReport
-          ? "レポートを再生成"
-          : "レポートを生成"}
+      {pending ? (
+        <>
+          <Spinner />
+          生成中...
+        </>
+      ) : hasReport ? (
+        "レポートを再生成"
+      ) : (
+        "レポートを生成"
+      )}
     </button>
   );
 }

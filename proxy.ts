@@ -1,20 +1,29 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-/** 認証が必要なパスの先頭 */
+/**
+ * 認証が必要なパスの先頭。
+ * app/(app) 配下の画面と1対1で対応させる (画面を追加したらここにも足す)。
+ */
 const PROTECTED_PREFIXES = [
   "/dashboard",
+  "/chat",
   "/research",
   "/trends",
   "/search",
   "/benchmarks",
-  "/competitors",
-  "/positioning",
   "/library",
+  "/competitors",
+  "/funnels",
+  "/positioning",
+  "/strategy",
+  "/pillars",
   "/generate",
   "/schedule",
+  "/calendar",
   "/analytics",
   "/brand",
+  "/knowledge",
   "/posts",
   "/settings",
 ];
@@ -46,5 +55,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // 拡張子付きのリクエスト (public 配下の画像・アイコン・manifest 等) は
+  // 保護対象のパスと前方一致しても素通しする。
+  // 例: /brand は MY BRAND 画面だが、/assets/logo-lockup.svg は静的ファイル。
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)",
+  ],
 };

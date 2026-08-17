@@ -229,8 +229,18 @@ export class MockXApiClient implements XApiClient {
   async createPost(args: {
     accessToken: string;
     text: string;
+    mediaIds?: string[];
+    replyToXPostId?: string;
   }): Promise<{ xPostId: string }> {
     return { xPostId: `mock-created-${seedFrom(args.text)}-${Date.now()}` };
+  }
+
+  async uploadMediaFromUrl(args: {
+    accessToken: string;
+    url: string;
+  }): Promise<{ mediaId: string }> {
+    // 実際のアップロードは行わず、URLから決定的なIDを返す
+    return { mediaId: `mock-media-${seedFrom(args.url)}` };
   }
 
   /**

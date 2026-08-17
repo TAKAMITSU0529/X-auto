@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" role="img" aria-label="X AUTO">
+  <title>X AUTO</title>
+  <defs>
+    <!-- シルバーの縦グラデーション。上を明るく、中間を締めて金属質にする -->
+    <linearGradient id="xa-silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="45%" stop-color="#eef2f7" />
+      <stop offset="62%" stop-color="#aeb8c6" />
+      <stop offset="100%" stop-color="#dfe6ee" />
+    </linearGradient>
+
+    <linearGradient id="xa-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8fd4ff" />
+      <stop offset="100%" stop-color="#0a72ff" />
+    </linearGradient>
+
+    <!-- 下端を走る光の筋 -->
+    <linearGradient id="xa-beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a72ff" stop-opacity="0" />
+      <stop offset="30%" stop-color="#39a9ff" stop-opacity="0.8" />
+      <stop offset="52%" stop-color="#cfeaff" stop-opacity="1" />
+      <stop offset="74%" stop-color="#39a9ff" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#0a72ff" stop-opacity="0" />
+    </linearGradient>
+
+    <radialGradient id="xa-flare" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#7cc7ff" />
+      <stop offset="100%" stop-color="#0a72ff" stop-opacity="0" />
+    </radialGradient>
+
+    <filter id="xa-glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="3.5" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- X マーク: 塗りではなく輪郭線にして、削り出しのような表情にする -->
+  <g transform="translate(12 16) scale(1.36)">
+    <path
+      d="M74.6 0h13.2L58.9 33.1 92 78h-26.2l-20.9-27.3L21 78H7.7l30.9-35.3L6.9 0h27.3l18.9 25zM70 70.1h7.3L29.1 7.5h-7.9z"
+      fill="none"
+      stroke="url(#xa-silver)"
+      stroke-width="2.4"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- AUTO: 角を落とした直線的な字形で、機械的な精度感を出す -->
+  <g transform="translate(-16 0)" fill="url(#xa-silver)" fill-rule="evenodd">
+    <!-- A -->
+    <path d="M180 122 L212 44 L228 44 L260 122 L242 122 L235.5 104 L204.5 104 L198 122 Z M209.5 90 L230.5 90 L220 62 Z" />
+    <!-- U -->
+    <path d="M276 44 L292 44 L292 98 L297 105 L323 105 L328 98 L328 44 L344 44 L344 104 L332 122 L288 122 L276 104 Z" />
+    <!-- T -->
+    <path d="M360 44 L428 44 L428 60 L402 60 L402 122 L386 122 L386 60 L360 60 Z" />
+    <!-- O -->
+    <path d="M456 44 L500 44 L512 58 L512 108 L500 122 L456 122 L444 108 L444 58 Z M459 60 L497 60 L501 65 L501 101 L497 106 L459 106 L455 101 L455 65 Z" />
+  </g>
+
+  <!-- A の抜きに入る青。ロゴ内で唯一の彩色にしてアクセントを1点に絞る -->
+  <path d="M193.5 90 L214.5 90 L204 62 Z" fill="url(#xa-blue)" />
+
+  <!-- O の内側に灯るレンズフレア -->
+  <ellipse cx="462" cy="83" rx="17" ry="5.5" fill="url(#xa-flare)" opacity="0.95" />
+  <circle cx="462" cy="83" r="3.6" fill="#ffffff" opacity="0.95" filter="url(#xa-glow)" />
+
+  <!-- 下端の光の筋 -->
+  <rect x="0" y="125" width="520" height="1.4" fill="url(#xa-beam)" filter="url(#xa-glow)" />
+</svg>

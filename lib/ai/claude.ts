@@ -3,7 +3,14 @@ import { env } from "@/lib/env";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -140,6 +147,9 @@ ${input.text}
       style?: unknown;
       prohibited?: unknown;
     };
+    strategy?: unknown;
+    knowledge?: { kind: string; title: string; content: string }[];
+    journeyStage?: string;
   }): Promise<DraftResult[]> {
     const client = createClient();
 
@@ -157,7 +167,29 @@ ${JSON.stringify(input.brand, null, 2)}
 `
       : "";
 
-    const prompt = `${sourceSection}${brandSection}
+    // マーケティング戦略 (F-09)。「誰に・何を・どんなふうに」をぶれさせない
+    const strategySection = input.strategy
+      ? `マーケティング戦略設定 (誰に・何を・なぜ自分か・どう伝えるか。この設定からぶれないこと):
+${JSON.stringify(input.strategy, null, 2)}
+`
+      : "";
+
+    // KNOWLEDGE BASE (F-17)。競合投稿より優先する一次情報
+    const knowledgeSection =
+      input.knowledge && input.knowledge.length > 0
+        ? `本人のKNOWLEDGE BASE (最優先の一次情報。参考投稿や一般論より、ここにある本人の経験・考え方・事例を優先して使うこと):
+${input.knowledge
+  .map((k) => `【${k.kind}】${k.title}\n${k.content}`)
+  .join("\n\n")}
+`
+        : "";
+
+    const journeySection = input.journeyStage
+      ? `この投稿のターゲット段階 (CUSTOMER JOURNEY): ${input.journeyStage} — この段階の読者に響く内容・CTAにすること
+`
+      : "";
+
+    const prompt = `${sourceSection}${brandSection}${strategySection}${knowledgeSection}${journeySection}
 ジャンル: ${input.genre}
 今回伝えたい内容: ${input.message}
 
@@ -424,5 +456,268 @@ profiles は3案。収益額など非公開情報は推測しないこと。`;
 
     const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
     return extractJson<PositioningResult>(raw);
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    const client = createClient();
+
+    const prompt = `以下はある発信者のマーケティング設定 (WHO/WHAT/WHY/HOW) です。
+このターゲットの CUSTOMER INSIGHT を仮説化してください。
+表面的なターゲット像ではなく「本人が言葉にしていない本音」まで踏み込むこと。
+ただしこれはマーケティング仮説であり、事実の断定ではないことを前提に書くこと。
+
+WHO (誰に): ${JSON.stringify(input.who)}
+WHAT (何を): ${JSON.stringify(input.what)}
+WHY (なぜ自分か): ${JSON.stringify(input.why)}
+HOW (どう伝えるか): ${JSON.stringify(input.how)}
+
+次のJSON形式で回答してください:
+{
+  "surfaceProblem": "表面的課題 (本人が自覚して口にしている課題)",
+  "realProblem": "本当の課題 (その裏にある構造的な課題)",
+  "emotions": ["いま抱えている感情 (2〜4個)"],
+  "fearedFuture": "恐れている未来",
+  "desiredFuture": "欲しい未来",
+  "whyNotAct": "行動しない理由",
+  "whyNotBuy": "購入しない理由",
+  "believedNorm": "信じている常識",
+  "normToBreak": "壊すべき常識"
+}
+
+健康・政治・宗教などのセンシティブ属性は推定しないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    return extractJson<CustomerInsightResult>(raw);
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    const client = createClient();
+
+    const prompt = `以下の発信者のために MARKETING PLAYBOOK を作成してください。
+ダイレクトレスポンス／顧客中心マーケティングの普遍的な原則
+(ターゲット市場の絞り込み・USP・顧客価値・卓越の戦略・リスクリバーサル・
+LTV/継続/クロスセル・紹介/JV・見込み客育成・オファー/CTA・テストと改善・既存資産活用)
+を、この発信者のX運用に合わせた具体的なアドバイスに落とし込むこと。
+書籍等の本文を転載せず、考え方だけを独自の言葉で適用すること。
+
+マーケティング設定: ${JSON.stringify(input.strategy)}
+${input.insight ? `CUSTOMER INSIGHT (仮説): ${JSON.stringify(input.insight)}` : ""}
+${input.brand ? `発信者情報: ${JSON.stringify(input.brand)}` : ""}
+
+次のJSON形式で回答してください:
+{
+  "advices": [
+    { "area": "原則名 (例: USP)", "advice": "この発信者に合わせた助言", "action": "今週できる具体的な行動" }
+  ],
+  "funnel": {
+    "steps": [{ "label": "X投稿", "description": "この段階でやること" }],
+    "note": "この動線設計の意図"
+  },
+  "journey": [
+    { "stage": "認知", "goal": "この段階のゴール", "postHint": "この段階向けの投稿の作り方" }
+  ]
+}
+
+advices は4〜6個。funnel.steps は X → リスト化 → 教育 → 商品 の流れで4〜6段。
+journey は 認知→興味→信頼→比較→相談→購入 の6段階すべて。
+全てマーケティング仮説であり、成果の保証をしないこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
+    return extractJson<PlaybookResult>(raw);
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    const client = createClient();
+
+    const list = input.competitors
+      .map(
+        (c) =>
+          `@${c.handle} / ${c.name}
+bio: ${c.bio}
+プロフィールURL: ${c.url ?? "なし"}
+誘導を含む投稿の例:
+${c.ctaPosts.length > 0 ? c.ctaPosts.map((p) => `- ${p.slice(0, 200)}`).join("\n") : "- (DB内に該当なし)"}`,
+      )
+      .join("\n\n---\n\n");
+
+    const prompt = `以下の競合アカウントの公開情報から、それぞれのマネタイズ動線を分析してください。
+
+重要な制約:
+- 「確認済み」(confirmedFacts / basis:"confirmed") には、与えられた bio・URL・投稿から実際に確認できることだけを入れること
+- それ以外の推測は必ず「推定」(estimated / basis:"estimated") に分類すること
+- 収益額・成約率・顧客数などの非公開情報は推測しないこと
+
+${list}
+
+次のJSON形式で回答してください:
+{
+  "competitors": [
+    {
+      "handle": "ハンドル名 (@なし)",
+      "monetizationType": "収益タイプ (コンテンツ販売/コンサル・スクール/店舗集客/SaaS/講座/セミナー/コミュニティ/広告・アフィリエイト/採用 など)",
+      "confirmedFacts": ["公開情報から確認できた事実"],
+      "estimated": ["AIによる推定"],
+      "funnelSteps": [{ "label": "X投稿 (認知)", "basis": "confirmed" }]
+    }
+  ],
+  "adaptation": {
+    "steps": ["自分が転用する場合の動線ステップ"],
+    "reason": "なぜこの動線が転用に適するか"
+  }
+}
+
+funnelSteps は 認知→プロフィール→リスト化→教育→商品 のような4〜6段の導線。
+competitors は全員分。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 4096);
+    return extractJson<FunnelAnalysisResult>(raw);
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    const client = createClient();
+
+    const prompt = `次のX投稿を、投稿前の最終チェックとして9項目で点検してください。
+
+本文:
+"""
+${input.text}
+"""
+${input.brand ? `発信者の MY BRAND (トーン・禁止事項): ${JSON.stringify(input.brand)}` : "MY BRAND: 未設定"}
+${input.strategy ? `マーケティング戦略 (誰に・何を): ${JSON.stringify(input.strategy)}` : "マーケティング戦略: 未設定"}
+
+チェック項目 (key は固定):
+1. readability (読みやすさ) 2. typos (誤字・脱字) 3. hook (書き出し)
+4. redundancy (冗長性) 5. targetFit (ターゲット適合) 6. brandFit (ブランド適合)
+7. cta (CTA) 8. risk (リスク表現: 誇張・断定・炎上リスク・根拠のない効果主張)
+
+さらに improvedText として、指摘を反映した改善版本文を作ってください
+(発信者本人の言葉のまま強くする。事実の捏造・数字の水増しは禁止)。
+
+次のJSON形式で回答してください:
+{
+  "items": [
+    { "key": "readability", "label": "読みやすさ", "ok": true, "comment": "判定理由" }
+  ],
+  "verdict": "ok",
+  "summary": "総評 (1〜2文)",
+  "improvedText": "改善版の本文",
+  "improvementNote": "改善版で変えた点"
+}
+
+items は8項目すべて。1つでも ok=false があれば verdict は "caution"。
+未設定の項目 (brand/strategy) は ok=false とし、設定を促すコメントを書くこと。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 3072);
+    return extractJson<PostCheckResult>(raw);
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    const client = createClient();
+
+    const historySection =
+      input.history.length > 0
+        ? `これまでの会話:\n${input.history
+            .slice(-8)
+            .map((m) => `${m.role === "user" ? "ユーザー" : "AI"}: ${m.text}`)
+            .join("\n")}\n`
+        : "";
+
+    const prompt = `あなたは X AUTO AI。このユーザーのX運用データすべてにアクセスできる相談相手です。
+
+ユーザーの実測データの要約 (事実):
+${JSON.stringify(input.context, null, 2)}
+
+${historySection}
+質問: ${input.question}
+
+回答ルール:
+- dataPoints には上の実測データから引用できる事実だけを入れる
+- hypotheses にはあなたの推定・仮説を入れる (事実と混同しないこと)
+- nextActions は「明日◯◯を投稿する」のような具体的な行動にする
+- データが足りない場合は正直に足りないと言う
+
+次のJSON形式で回答してください:
+{
+  "answer": "会話としての回答 (2〜4文)",
+  "dataPoints": ["根拠にした実測データ"],
+  "hypotheses": ["あなたの仮説"],
+  "nextActions": ["次の具体的な行動 (1〜3個)"]
+}`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 2048);
+    return extractJson<ChatReply>(raw);
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    const client = createClient();
+
+    const prompt = `X の月間投稿計画を設計してください (AUTO CONTENT PLAN)。
+
+期間: ${input.startDate} 〜 ${input.endDate}
+投稿数: ${input.count}件
+
+ユーザーの設定・実測データ (事実):
+${JSON.stringify(input.context, null, 2)}
+
+設計ルール:
+- CONTENT PILLARS (柱と比率) があればその比率に沿ってテーマを配分する
+- 目的 (Reach/Authority/Trust/Education/Conversion) をバランスさせる
+- 実績上のおすすめ時間帯があれば time に反映する
+- ネタ (title/angle) は本人の強み・実績・ナレッジと結びつける
+- 同じ切り口を連日並べない
+
+次のJSON形式で回答してください:
+{
+  "items": [
+    {
+      "date": "YYYY-MM-DD",
+      "time": "19:00",
+      "pillar": "柱の名前",
+      "purpose": "Reach",
+      "title": "ネタのタイトル",
+      "angle": "切り口・何をどう書くか"
+    }
+  ],
+  "note": "この計画の設計意図 (2〜3文)"
+}
+
+items はちょうど ${input.count} 件。date は期間内に収めること。`;
+
+    const raw = await complete(client, ANALYSIS_SYSTEM, prompt, 8192);
+    const parsed = extractJson<ContentPlanResult>(raw);
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      throw new Error("AIから有効な投稿計画が返りませんでした。");
+    }
+    return parsed;
   }
 }

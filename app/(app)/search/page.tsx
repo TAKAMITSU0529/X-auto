@@ -1,14 +1,18 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
+import { SubmitButton, selectClassName } from "@/components/form";
 import {
   Card,
+  CardHeader,
   EmptyState,
+  LinkButton,
   NextActionButton,
   PageHeader,
   formatDateTime,
   formatNumber,
 } from "@/components/ui";
+
+const LABEL = "mb-1.5 block text-[13px] font-medium text-ink-700";
 
 /**
  * 検索・フィルタ (F-24)。
@@ -68,33 +72,34 @@ export default async function SearchPage({
   return (
     <>
       <PageHeader
+        eyebrow="調べる"
         title="検索"
         description="取得済みのベンチマーク投稿を横断検索します（DB内検索のためAPIコストは掛かりません）。"
       />
 
       <div className="space-y-6">
         <Card>
+          <CardHeader
+            title="検索条件"
+            description="複数の条件を組み合わせて、取得済みの投稿プールを絞り込みます。"
+          />
           <form method="GET" className="flex flex-wrap items-end gap-3">
             <label className="min-w-[220px] flex-1">
-              <span className="mb-1.5 block text-xs font-medium text-ink-700">
-                キーワード
-              </span>
+              <span className={LABEL}>キーワード</span>
               <input
                 name="q"
                 defaultValue={q ?? ""}
                 placeholder="本文に含まれる語句"
-                className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className={selectClassName}
               />
             </label>
 
             <label className="w-48">
-              <span className="mb-1.5 block text-xs font-medium text-ink-700">
-                アカウント
-              </span>
+              <span className={LABEL}>アカウント</span>
               <select
                 name="account"
                 defaultValue={account ?? ""}
-                className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500"
+                className={selectClassName}
               >
                 <option value="">すべて</option>
                 {accounts.map((a) => (
@@ -106,87 +111,83 @@ export default async function SearchPage({
             </label>
 
             <label className="w-32">
-              <span className="mb-1.5 block text-xs font-medium text-ink-700">
-                いいね数以上
-              </span>
+              <span className={LABEL}>いいね数以上</span>
               <input
                 name="minLikes"
                 type="number"
                 min={0}
                 defaultValue={minLikes ?? ""}
-                className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500"
+                className={`${selectClassName} tabular-nums`}
               />
             </label>
 
-            <label className="flex items-center gap-2 pb-2 text-sm text-ink-600">
+            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-[13px] text-ink-600">
               <input
                 type="checkbox"
                 name="saved"
                 value="1"
                 defaultChecked={saved === "1"}
-                className="h-4 w-4 rounded border-ink-300"
+                className="h-4 w-4 rounded border-ink-300 accent-brand-600"
               />
               保存済みのみ
             </label>
 
-            <button
-              type="submit"
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-            >
-              検索
-            </button>
+            <div className="w-28">
+              <SubmitButton pendingLabel="検索中...">検索</SubmitButton>
+            </div>
           </form>
         </Card>
 
         {!hasQuery ? (
           <EmptyState
             title="条件を指定して検索してください"
-            description="キーワード・アカウント・いいね数・保存済みで、取得済みの投稿プールを絞り込めます。"
+            description="キーワード・アカウント・いいね数・保存済みで、取得済みの投稿プールを絞り込めます。まずはキーワードを入れて検索してみてください。"
           />
         ) : filtered.length === 0 ? (
           <EmptyState
             title="該当する投稿がありません"
             description="条件を変えるか、リサーチで投稿プールを増やしてください。"
-            action={
-              <Link
-                href="/research"
-                className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-              >
-                リサーチへ
-              </Link>
-            }
+            action={<LinkButton href="/research">リサーチへ</LinkButton>}
           />
         ) : (
           <Card>
-            <p className="mb-3 text-xs text-ink-500">
-              {filtered.length} 件（いいね数順・最大50件表示）
-            </p>
+            <CardHeader
+              title="検索結果"
+              description={`${filtered.length} 件（いいね数順・最大50件表示）`}
+            />
             <ul className="divide-y divide-ink-100">
               {filtered.map((post) => {
                 const m = post.metrics[0];
                 return (
-                  <li key={post.id} className="py-4">
-                    <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-ink-500">
-                      <span className="font-medium text-ink-700">
+                  <li key={post.id} className="py-4 first:pt-0 last:pb-0">
+                    <div className="mb-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500">
+                      <span className="font-semibold text-ink-800">
                         @{post.authorHandle}
                       </span>
-                      <span>{formatDateTime(post.postedAt)}</span>
-                      <span>いいね {formatNumber(m?.likes ?? 0)}</span>
+                      <span className="tabular-nums text-ink-400">
+                        {formatDateTime(post.postedAt)}
+                      </span>
+                      <span className="tabular-nums">
+                        いいね{" "}
+                        <span className="font-semibold text-ink-700">
+                          {formatNumber(m?.likes ?? 0)}
+                        </span>
+                      </span>
                       {post.analyses[0]?.templateType ? (
-                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700">
+                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
                           {post.analyses[0].templateType}
                         </span>
                       ) : null}
                       {post.modelPosts.length > 0 ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
                           保存済み
                         </span>
                       ) : null}
                     </div>
-                    <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-800">
+                    <p className="line-clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-800">
                       {post.text}
                     </p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2.5 flex flex-wrap gap-2">
                       <NextActionButton href={`/posts/${post.id}`}>
                         この投稿を分析
                       </NextActionButton>

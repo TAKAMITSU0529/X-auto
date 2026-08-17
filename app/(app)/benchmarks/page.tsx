@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
 import {
   Card,
+  CardHeader,
   EmptyState,
+  LinkButton,
   PageHeader,
   formatDateTime,
   formatNumber,
@@ -11,6 +12,9 @@ import {
 import { CreateListForm } from "./create-list-form";
 import { AddAccountForm } from "./add-account-form";
 import { deleteAccountAction, deleteListAction } from "./actions";
+
+const DANGER_BUTTON =
+  "rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ink-500 shadow-xs transition duration-200 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600";
 
 export default async function BenchmarksPage() {
   const userId = await requireUserId();
@@ -23,97 +27,113 @@ export default async function BenchmarksPage() {
     },
   });
 
+  const accountTotal = lists.reduce((sum, list) => sum + list.accounts.length, 0);
+
   return (
     <>
       <PageHeader
+        eyebrow="調べる"
         title="ベンチマーク"
         description="参考にしたいアカウントをリストで管理します。ここに登録したアカウントがリサーチの対象になります。"
+        action={
+          accountTotal > 0 ? (
+            <LinkButton href="/research" variant="secondary">
+              リサーチへ進む
+            </LinkButton>
+          ) : null
+        }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-4">
-          <Card>
-            <h2 className="mb-4 text-sm font-semibold text-ink-900">
-              リストを追加
-            </h2>
-            <CreateListForm />
-          </Card>
-        </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_1fr]">
+        <Card>
+          <CardHeader
+            title="リストを追加"
+            description="発信ジャンルごとに分けると、あとの分析が比較しやすくなります。"
+          />
+          <CreateListForm />
+        </Card>
 
         <div className="space-y-6">
           {lists.length === 0 ? (
             <EmptyState
               title="まだリストがありません"
-              description="「AI経営者」「店舗集客系」のように、発信ジャンルごとにリストを作ると分析しやすくなります。"
+              description="「AI経営者」「店舗集客系」のように、発信ジャンルごとにリストを作ると分析しやすくなります。左の「リストを追加」から最初のリストを作成してください。"
             />
           ) : (
             lists.map((list) => (
               <Card key={list.id}>
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold text-ink-900">{list.name}</h2>
-                    <p className="mt-0.5 text-xs text-ink-500">
-                      {list.genreTag ? `${list.genreTag} · ` : ""}
-                      {list.accounts.length} アカウント
-                    </p>
-                    {list.memo ? (
-                      <p className="mt-1 text-xs text-ink-400">{list.memo}</p>
-                    ) : null}
-                  </div>
-                  <form action={deleteListAction}>
-                    <input type="hidden" name="listId" value={list.id} />
-                    <button
-                      type="submit"
-                      className="rounded-md border border-ink-200 px-2 py-1 text-xs text-ink-500 transition hover:bg-red-50 hover:text-red-600"
-                    >
-                      リスト削除
-                    </button>
-                  </form>
-                </div>
+                <CardHeader
+                  title={list.name}
+                  description={`${list.genreTag ? `${list.genreTag} · ` : ""}${list.accounts.length} アカウント`}
+                  action={
+                    <form action={deleteListAction}>
+                      <input type="hidden" name="listId" value={list.id} />
+                      <button type="submit" className={DANGER_BUTTON}>
+                        リスト削除
+                      </button>
+                    </form>
+                  }
+                />
+
+                {list.memo ? (
+                  <p className="mb-4 rounded-lg border border-ink-100 bg-ink-25 px-3 py-2 text-xs leading-relaxed text-ink-500">
+                    {list.memo}
+                  </p>
+                ) : null}
 
                 {list.accounts.length === 0 ? (
-                  <p className="mb-4 rounded-lg bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
-                    アカウントが未登録です。下のフォームから @ID を追加してください。
-                  </p>
+                  <EmptyState
+                    title="アカウントが未登録です"
+                    description="下のフォームから @ID またはプロフィールURLを追加すると、このリストがリサーチの対象になります。"
+                  />
                 ) : (
-                  <ul className="mb-4 divide-y divide-ink-100">
+                  <ul className="divide-y divide-ink-100 border-y border-ink-100">
                     {list.accounts.map((account) => (
                       <li
                         key={account.id}
                         className="flex items-center justify-between gap-4 py-3"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-ink-900">
+                          <p className="truncate text-[13px] font-semibold text-ink-900">
                             {account.displayName ?? account.handle}
                             <span className="ml-1.5 font-normal text-ink-400">
                               @{account.handle}
                             </span>
                           </p>
-                          <p className="mt-0.5 text-xs text-ink-500">
-                            フォロワー {formatNumber(account.followers)} ·{" "}
-                            投稿 {formatNumber(account.postsCount)}
-                            {account.lastAnalyzedAt
-                              ? ` · 最終リサーチ ${formatDateTime(account.lastAnalyzedAt)}`
-                              : " · 未リサーチ"}
+                          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-500">
+                            <span>
+                              フォロワー{" "}
+                              <span className="font-medium tabular-nums text-ink-700">
+                                {formatNumber(account.followers)}
+                              </span>
+                            </span>
+                            <span>
+                              投稿{" "}
+                              <span className="font-medium tabular-nums text-ink-700">
+                                {formatNumber(account.postsCount)}
+                              </span>
+                            </span>
+                            <span className="tabular-nums text-ink-400">
+                              {account.lastAnalyzedAt
+                                ? `最終リサーチ ${formatDateTime(account.lastAnalyzedAt)}`
+                                : "未リサーチ"}
+                            </span>
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          <Link
+                          <LinkButton
                             href={`/research?account=${account.id}`}
-                            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700"
+                            size="sm"
                           >
                             リサーチ
-                          </Link>
+                          </LinkButton>
                           <form action={deleteAccountAction}>
                             <input
                               type="hidden"
                               name="accountId"
                               value={account.id}
                             />
-                            <button
-                              type="submit"
-                              className="rounded-md border border-ink-200 px-2 py-1.5 text-xs text-ink-500 transition hover:bg-red-50 hover:text-red-600"
-                            >
+                            <button type="submit" className={DANGER_BUTTON}>
                               削除
                             </button>
                           </form>
@@ -123,7 +143,7 @@ export default async function BenchmarksPage() {
                   </ul>
                 )}
 
-                <div className="border-t border-ink-100 pt-4">
+                <div className="mt-4">
                   <AddAccountForm listId={list.id} />
                 </div>
               </Card>

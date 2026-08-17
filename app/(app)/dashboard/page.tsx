@@ -7,15 +7,20 @@ import { computePerformanceInsights } from "@/lib/analytics/insights";
 import { getLatestWeeklyReport } from "@/lib/analytics/weekly-report";
 import {
   Card,
+  CardHeader,
   EmptyState,
   HypothesisNote,
+  LinkButton,
+  NextActionButton,
   OutlierBadge,
   PageHeader,
   StatTile,
+  Tag,
   formatDateTime,
   formatNumber,
   formatPercent,
 } from "@/components/ui";
+import { IconAlert, IconSchedule } from "@/components/icons";
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
@@ -82,21 +87,28 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader
+        eyebrow="ホーム"
         title="ダッシュボード"
         description="今日やるべきことと、直近のリサーチ結果のサマリーです。"
+        action={
+          <LinkButton href="/chat" variant="secondary" size="md">
+            AI に相談する
+          </LinkButton>
+        }
       />
 
       {/* PERFORMANCE: 数字 (要件定義 F-21 / §8.1) */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="ベンチマークアカウント"
+          label="ベンチマーク"
           value={formatNumber(accountCount)}
-          sub="登録数"
+          sub="登録アカウント数"
         />
         <StatTile
           label="取得済み投稿"
           value={formatNumber(postCount)}
           sub="分析対象のプール"
+          accent
         />
         <StatTile
           label="今月のAPI利用"
@@ -105,104 +117,154 @@ export default async function DashboardPage() {
         />
         <StatTile
           label="最終リサーチ"
-          value={latestJob ? formatDateTime(latestJob.createdAt) : "—"}
+          value={
+            latestJob
+              ? new Intl.DateTimeFormat("ja-JP", {
+                  month: "numeric",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(latestJob.createdAt)
+              : "—"
+          }
           sub={latestJob ? latestJob.target : "未実行"}
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-ink-900">
-            TODAY — 次にやること
-          </h2>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader
+              title="TODAY — 次にやること"
+              description="いま着手すべき1手だけを表示します。"
+            />
 
-          {accountCount === 0 ? (
-            <NextStep
-              text="まずベンチマークアカウントを登録しましょう。参考にしたいアカウントの投稿を分析対象にします。"
-              href="/benchmarks"
-              label="ベンチマークを登録"
-            />
-          ) : postCount === 0 ? (
-            <NextStep
-              text="ベンチマークアカウントのリサーチをまだ実行していません。投稿を取得して、伸びた投稿を見つけましょう。"
-              href="/research"
-              label="リサーチを実行"
-            />
-          ) : (
-            <NextStep
-              text="取得済みの投稿から外れ値を確認し、モデリングの候補を選びましょう。"
-              href="/research"
-              label="リサーチ結果を見る"
-            />
-          )}
+            {accountCount === 0 ? (
+              <NextStep
+                text="まずベンチマークアカウントを登録しましょう。参考にしたいアカウントの投稿を分析対象にします。"
+                href="/benchmarks"
+                label="ベンチマークを登録"
+              />
+            ) : postCount === 0 ? (
+              <NextStep
+                text="ベンチマークアカウントのリサーチをまだ実行していません。投稿を取得して、伸びた投稿を見つけましょう。"
+                href="/research"
+                label="リサーチを実行"
+              />
+            ) : (
+              <NextStep
+                text="取得済みの投稿から外れ値を確認し、モデリングの候補を選びましょう。"
+                href="/research"
+                label="リサーチ結果を見る"
+              />
+            )}
+          </Card>
 
-          <div className="mt-4 space-y-2 border-t border-ink-100 pt-4 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
-              予約状況
-            </p>
+          <Card>
+            <CardHeader title="予約状況" />
+
             {failedCount > 0 ? (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-                失敗した予約投稿が {failedCount} 件あります。
-                <Link href="/schedule" className="ml-1 font-semibold underline">
-                  確認する
-                </Link>
-              </p>
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-800">
+                <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  失敗した予約投稿が{" "}
+                  <span className="font-semibold tabular-nums">
+                    {failedCount}
+                  </span>{" "}
+                  件あります。
+                  <Link
+                    href="/schedule"
+                    className="ml-1 font-semibold underline underline-offset-2"
+                  >
+                    確認する
+                  </Link>
+                </p>
+              </div>
             ) : null}
+
             {todayScheduled.length > 0 ? (
-              <ul className="space-y-1.5">
+              <ul className="divide-y divide-ink-100">
                 {todayScheduled.map((item) => (
-                  <li key={item.id} className="flex items-baseline gap-2 text-xs">
-                    <span className="shrink-0 font-semibold tabular-nums text-brand-700">
-                      {formatDateTime(item.scheduledAt)}
+                  <li key={item.id} className="flex items-start gap-3 py-2.5">
+                    <span className="mt-px flex shrink-0 items-center gap-1.5 rounded-md bg-brand-50 px-2 py-1 text-[11px] font-semibold tabular-nums text-brand-700">
+                      <IconSchedule className="h-3 w-3" />
+                      {new Intl.DateTimeFormat("ja-JP", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).format(item.scheduledAt)}
                     </span>
-                    <span className="line-clamp-1 text-ink-600">{item.text}</span>
+                    <span className="line-clamp-2 text-[13px] leading-relaxed text-ink-600">
+                      {item.text}
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-ink-500">
-                今日の予約投稿はありません。
-                {draftCount > 0
-                  ? `未予約の下書きが ${draftCount} 件あります。`
-                  : ""}
-                <Link href="/schedule" className="ml-1 text-brand-600 underline">
-                  予約投稿へ
-                </Link>
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ink-50 px-3.5 py-3">
+                <p className="text-[13px] text-ink-600">
+                  今日の予約投稿はありません。
+                  {draftCount > 0 ? (
+                    <>
+                      未予約の下書きが{" "}
+                      <span className="font-semibold tabular-nums text-ink-800">
+                        {draftCount}
+                      </span>{" "}
+                      件あります。
+                    </>
+                  ) : null}
+                </p>
+                <NextActionButton href="/schedule">予約投稿へ</NextActionButton>
+              </div>
             )}
-          </div>
-        </Card>
+          </Card>
+        </div>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-ink-900">
-            直近リサーチの外れ値トップ3
-          </h2>
+          <CardHeader
+            title="直近リサーチの外れ値トップ3"
+            description={
+              ranking
+                ? `@${ranking.account.handle} · 通常ER ${formatPercent(ranking.baseline.baselineRate)}`
+                : undefined
+            }
+            action={
+              ranking && ranking.posts.length > 0 ? (
+                <Link
+                  href="/research"
+                  className="text-xs font-medium text-brand-600 hover:underline"
+                >
+                  すべて見る
+                </Link>
+              ) : undefined
+            }
+          />
 
           {!ranking || ranking.posts.length === 0 ? (
             <EmptyState
               title="まだリサーチ結果がありません"
-              description="リサーチを実行すると、通常成績と比べて伸びた投稿がここに表示されます。"
+              description="リサーチを実行すると、そのアカウントの通常成績と比べて伸びた投稿がここに並びます。"
+              action={
+                <LinkButton href="/research" size="sm">
+                  リサーチを実行する
+                </LinkButton>
+              }
             />
           ) : (
             <>
-              <p className="mb-3 text-xs text-ink-500">
-                @{ranking.account.handle} · 通常ER{" "}
-                {formatPercent(ranking.baseline.baselineRate)}
-              </p>
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {ranking.posts.map((post) => (
                   <li key={post.id}>
                     <Link
                       href={`/posts/${post.id}`}
-                      className="block rounded-lg border border-ink-200 p-3 transition hover:border-brand-300 hover:bg-brand-50"
+                      className="block rounded-xl border border-ink-200/70 p-3.5 transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50/40 hover:shadow-md"
                     >
-                      <div className="mb-1.5 flex items-center gap-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <OutlierBadge score={post.outlierScore} />
-                        <span className="text-xs text-ink-400">
+                        <span className="text-[11px] tabular-nums text-ink-400">
                           いいね {formatNumber(post.metrics.likes)}
                         </span>
                       </div>
-                      <p className="line-clamp-3 whitespace-pre-wrap text-sm text-ink-700">
+                      <p className="line-clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-700">
                         {post.text}
                       </p>
                     </Link>
@@ -222,38 +284,57 @@ export default async function DashboardPage() {
       {/* AI INSIGHT (F-21) */}
       {insights.insights.length > 0 || latestReport ? (
         <Card className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold text-ink-900">
-            AI INSIGHT
-          </h2>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <CardHeader
+            title="AI INSIGHT"
+            description="実測データからの傾向と、次に取るべき行動です。"
+          />
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             {insights.insights.length > 0 ? (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
-                  実測データからの傾向（DATA）
-                </p>
-                <ul className="space-y-1.5 text-sm text-ink-700">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Tag tone="data">DATA</Tag>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                    実測データからの傾向
+                  </span>
+                </div>
+                <ul className="space-y-2">
                   {insights.insights.slice(0, 3).map((text, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-brand-600">▸</span>
+                    <li
+                      key={i}
+                      className="flex gap-2.5 rounded-lg bg-ink-50 px-3 py-2.5 text-[13px] leading-relaxed text-ink-700"
+                    >
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ink-400" />
                       <span>{text}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : null}
+
             {latestReport ? (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-500">
-                  NEXT BEST ACTION（AI推定）
-                </p>
-                <ol className="list-inside list-decimal space-y-1.5 text-sm text-ink-700">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Tag tone="action">ACTION</Tag>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                    NEXT BEST ACTION（AI推定）
+                  </span>
+                </div>
+                <ol className="space-y-2">
                   {latestReport.report.nextActions.slice(0, 3).map((a, i) => (
-                    <li key={i}>{a}</li>
+                    <li
+                      key={i}
+                      className="flex gap-2.5 rounded-lg bg-emerald-50/70 px-3 py-2.5 text-[13px] leading-relaxed text-emerald-900"
+                    >
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800">
+                        {i + 1}
+                      </span>
+                      <span>{a}</span>
+                    </li>
                   ))}
                 </ol>
                 <Link
                   href="/analytics"
-                  className="mt-2 inline-block text-xs text-brand-600 hover:underline"
+                  className="mt-3 inline-block text-xs font-medium text-brand-600 hover:underline"
                 >
                   週次レポート全文を見る →
                 </Link>
@@ -276,14 +357,11 @@ function NextStep({
   label: string;
 }) {
   return (
-    <div className="rounded-lg border border-brand-100 bg-brand-50 p-4">
-      <p className="text-sm text-ink-700">{text}</p>
-      <Link
-        href={href}
-        className="mt-3 inline-flex rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700"
-      >
-        {label}
-      </Link>
+    <div className="rounded-xl border border-brand-200/70 bg-gradient-to-br from-brand-50 to-white p-4">
+      <p className="text-[13px] leading-relaxed text-ink-700">{text}</p>
+      <div className="mt-3.5">
+        <NextActionButton href={href}>{label}</NextActionButton>
+      </div>
     </div>
   );
 }

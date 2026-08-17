@@ -6,7 +6,14 @@ import { MockAiProvider } from "@/lib/ai/mock";
 import type {
   AiProvider,
   BatchAnalysisResult,
+  ChatMessage,
+  ChatReply,
   CompetitorScore,
+  ContentPlanResult,
+  CustomerInsightResult,
+  FunnelAnalysisResult,
+  PlaybookResult,
+  PostCheckResult,
   PositioningResult,
   DraftResult,
   DraftScore,
@@ -61,6 +68,9 @@ export class AiService {
       style?: unknown;
       prohibited?: unknown;
     };
+    strategy?: unknown;
+    knowledge?: { kind: string; title: string; content: string }[];
+    journeyStage?: string;
   }): Promise<DraftResult[]> {
     return withApiGuard({
       userId: this.userId,
@@ -152,6 +162,104 @@ export class AiService {
       units: 1,
       run: async () => ({
         result: await this.provider.analyzePositioning(input),
+      }),
+    });
+  }
+
+  async generateCustomerInsight(input: {
+    who: unknown;
+    what: unknown;
+    why: unknown;
+    how: unknown;
+  }): Promise<CustomerInsightResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.customerInsight",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generateCustomerInsight(input),
+      }),
+    });
+  }
+
+  async generatePlaybook(input: {
+    strategy: unknown;
+    insight?: unknown;
+    brand?: unknown;
+  }): Promise<PlaybookResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.playbook",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generatePlaybook(input),
+      }),
+    });
+  }
+
+  async analyzeFunnels(input: {
+    competitors: {
+      handle: string;
+      name: string;
+      bio: string;
+      url: string | null;
+      ctaPosts: string[];
+    }[];
+  }): Promise<FunnelAnalysisResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.funnels",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.analyzeFunnels(input),
+      }),
+    });
+  }
+
+  async checkPost(input: {
+    text: string;
+    brand?: unknown;
+    strategy?: unknown;
+  }): Promise<PostCheckResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.checkPost",
+      units: 1,
+      run: async () => ({ result: await this.provider.checkPost(input) }),
+    });
+  }
+
+  async chat(input: {
+    question: string;
+    history: ChatMessage[];
+    context: unknown;
+  }): Promise<ChatReply> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.chat",
+      units: 1,
+      run: async () => ({ result: await this.provider.chat(input) }),
+    });
+  }
+
+  async generateContentPlan(input: {
+    count: number;
+    startDate: string;
+    endDate: string;
+    context: unknown;
+  }): Promise<ContentPlanResult> {
+    return withApiGuard({
+      userId: this.userId,
+      apiType: ApiType.ai,
+      endpoint: "ai.contentPlan",
+      units: 1,
+      run: async () => ({
+        result: await this.provider.generateContentPlan(input),
       }),
     });
   }

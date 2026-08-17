@@ -10,7 +10,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const [state, formAction] = useActionState(loginAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-4">
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
 
       <Field
@@ -29,7 +29,10 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       />
 
       <FormError message={state.error} />
-      <SubmitButton>ログイン</SubmitButton>
+
+      <div className="pt-1">
+        <SubmitButton pendingLabel="ログイン中...">ログイン</SubmitButton>
+      </div>
     </form>
   );
 }
